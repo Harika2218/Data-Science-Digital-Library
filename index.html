@@ -1,0 +1,2822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBU Data Science Digital Library & Interactive Portal</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for data science visualization in code outputs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mbu: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#1e40af',
+              600: '#1d4ed8',
+              700: '#1e3a8a',
+              800: '#172554',
+              accent: '#d97706' // warm gold accent
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Courier New', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100,116,139,0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100,116,139,0.5);
+    }
+
+    .pdf-reader-backdrop {
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+    }
+
+    .pdf-reader-book {
+      position: relative;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 18px;
+      border-radius: 26px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(8, 47, 73, 0.9));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 40px 90px rgba(15, 23, 42, 0.38), inset 0 0 0 2px rgba(255,255,255,0.02);
+    }
+
+    .pdf-reader-page {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      min-height: 520px;
+      border-radius: 12px;
+      background: #f8fafc;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.28), 0 4px 12px rgba(15, 23, 42, 0.18);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+      transform-origin: center center;
+    }
+
+    .pdf-reader-page canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: white;
+    }
+
+    .pdf-reader-spine {
+      position: relative;
+      width: 16px;
+      min-width: 16px;
+      background: linear-gradient(180deg, rgba(148, 163, 184, 0.28), rgba(15, 23, 42, 0.7), rgba(148, 163, 184, 0.28));
+      border-radius: 9999px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .pdf-reader-spine::before {
+      content: '';
+      position: absolute;
+      inset: 10px 4px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.25), rgba(15, 23, 42, 0.3));
+    }
+
+    .pdf-reader-controls button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 767px) {
+      .pdf-reader-book {
+        padding: 12px;
+        gap: 6px;
+      }
+
+      .pdf-reader-page {
+        min-height: 300px;
+      }
+
+      .pdf-reader-spine {
+        width: 8px;
+        min-width: 8px;
+      }
+    }
+    /* Code editor styling */
+    .editor-line-numbers {
+      counter-reset: line;
+    }
+    .editor-line-numbers > div {
+      counter-increment: line;
+    }
+    .editor-line-numbers > div::before {
+      content: counter(line);
+      display: inline-block;
+      width: 2.2rem;
+      padding-right: 0.8rem;
+      text-align: right;
+      color: #64748b;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+  <!-- ==================== TOP NAVIGATION HEADER ==================== -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- MBU Brand Logo & Identity -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-900 via-indigo-800 to-amber-600 text-white font-extrabold shadow-md shadow-blue-900/20 ring-2 ring-amber-500/30">
+            <span class="text-xs tracking-tighter leading-none text-center">
+              <span class="block text-amber-300 font-black">MBU</span>
+              <span class="text-[9px] text-blue-100 font-semibold tracking-wider">DS</span>
+            </span>
+          </div>
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <span class="font-black text-lg tracking-tight bg-gradient-to-r from-blue-800 via-blue-600 to-amber-600 dark:from-blue-400 dark:to-amber-400 bg-clip-text text-transparent">MOHAN BABU</span>
+              <span class="text-xs px-1.5 py-0.5 rounded font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">University</span>
+            </div>
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400">School of Computing • Data Science Digital Library</p>
+          </div>
+        </div>
+
+        <!-- Desktop Navigation Items -->
+        <nav class="hidden md:flex items-center space-x-1 font-medium text-sm">
+          <button onclick="switchTab('dashboard')" data-tab-nav="dashboard" class="tab-btn px-3 py-2 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 flex items-center gap-1.5 transition">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Dashboard</span>
+          </button>
+          <button onclick="switchTab('modules')" data-tab-nav="modules" class="tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition">
+            <i data-lucide="book-marked" class="w-4 h-4"></i>
+            <span>Modules</span>
+          </button>
+          <button onclick="switchTab('tools')" data-tab-nav="tools" class="tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition">
+            <i data-lucide="wrench" class="w-4 h-4"></i>
+            <span>Tools Hub</span>
+          </button>
+          <button onclick="switchTab('resources')" data-tab-nav="resources" class="tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition">
+            <i data-lucide="library" class="w-4 h-4"></i>
+            <span>Resources</span>
+          </button>
+          <button onclick="switchTab('labs')" data-tab-nav="labs" class="tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition">
+            <i data-lucide="flask-conical" class="w-4 h-4"></i>
+            <span>Lab Experiments</span>
+          </button>
+          <button onclick="switchTab('assignments')" data-tab-nav="assignments" class="tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition">
+            <i data-lucide="terminal" class="w-4 h-4"></i>
+            <span>Code Lab & Assignments</span>
+          </button>
+        </nav>
+
+        <!-- Right Side Utility Controls -->
+        <div class="flex items-center space-x-2">
+          <!-- Dark Mode Toggle -->
+          <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <i data-lucide="moon" id="themeIcon" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <button onclick="showToast('Notification', 'Assignments: Logistic Regression lab is due Friday!', 'info')" title="Notifications" class="relative p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full"></span>
+          </button>
+
+          <!-- Mini Profile Chip in Nav -->
+          <div onclick="switchTab('profile')" class="cursor-pointer flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+            <img id="navAvatarImg" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Student Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-blue-500/40">
+            <div class="hidden xl:block text-left text-xs">
+              <div id="navStudentName" class="font-semibold text-slate-800 dark:text-slate-200">V. Sai Krishna</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">MBU B.Tech DS</div>
+            </div>
+          </div>
+
+          <!-- Mobile Hamburger Toggle -->
+          <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobileMenu" class="hidden md:hidden px-4 pt-2 pb-4 space-y-1 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <button onclick="switchTab('dashboard'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+      </button>
+      <button onclick="switchTab('modules'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="book-marked" class="w-4 h-4"></i> Modules
+      </button>
+      <button onclick="switchTab('tools'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="wrench" class="w-4 h-4"></i> Tools Hub
+      </button>
+      <button onclick="switchTab('resources'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="library" class="w-4 h-4"></i> Resources
+      </button>
+      <button onclick="switchTab('labs'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="flask-conical" class="w-4 h-4"></i> Lab Experiments
+      </button>
+      <button onclick="switchTab('assignments'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="terminal" class="w-4 h-4"></i> Code Lab & Assignments
+      </button>
+      <button onclick="switchTab('profile'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-md font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+        <i data-lucide="user" class="w-4 h-4"></i> My Student Profile
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- 1. DASHBOARD VIEW -->
+    <section id="tab-dashboard" class="tab-pane space-y-8">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 sm:p-10 shadow-xl border border-blue-800/40">
+        <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute right-1/4 -top-10 w-60 h-60 bg-blue-500/15 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div class="relative z-10 max-w-3xl space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Mohan Babu University Academic Portal
+          </div>
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Data Science Digital Library & Interactive Lab</h1>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+            Access curated lecture modules, interactive machine learning experiments, an extensive repository of research papers, notebooks, datasets, and execute Pythonic code directly inside the browser.
+          </p>
+          <div class="flex flex-wrap gap-3 pt-2">
+            <button onclick="switchTab('assignments')" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 transition transform active:scale-95">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i> Launch Interactive Code Lab
+            </button>
+            <button onclick="switchTab('labs')" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm backdrop-blur flex items-center gap-2 transition">
+              <i data-lucide="flask-conical" class="w-4 h-4"></i> Browse Lab Experiments
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+          <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" id="stat-modules-count">6</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Curriculum Modules</div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+          <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+            <i data-lucide="flask-conical" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" id="stat-labs-count">6</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Lab Experiments</div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+          <div class="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+            <i data-lucide="wrench" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" id="stat-tools-count">18</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">DS Tools & Stacks</div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+          <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+            <i data-lucide="award" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" id="stat-submissions-count">2</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Assignments Done</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Bar & Deadlines -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Shortcuts -->
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i> Quick Actions & Shortcuts
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button onclick="openModal('addModuleModal')" class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 text-left transition group">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>
+              <div class="text-xs font-semibold">Add Module</div>
+              <div class="text-[11px] text-slate-500">Add syllabus unit</div>
+            </button>
+            <button onclick="openModal('addResourceModal')" class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 text-left transition group">
+              <i data-lucide="folder-plus" class="w-5 h-5 text-emerald-600 mb-2 group-hover:scale-110 transition-transform"></i>
+              <div class="text-xs font-semibold">Add Resource</div>
+              <div class="text-[11px] text-slate-500">Upload book / paper</div>
+            </button>
+            <button onclick="switchTab('assignments')" class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-500/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-purple-50/30 dark:hover:bg-purple-900/20 text-left transition group">
+              <i data-lucide="code-2" class="w-5 h-5 text-purple-600 mb-2 group-hover:scale-110 transition-transform"></i>
+              <div class="text-xs font-semibold">Run Code Lab</div>
+              <div class="text-[11px] text-slate-500">Solve assignments</div>
+            </button>
+            <button onclick="switchTab('tools')" class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-amber-50/30 dark:hover:bg-amber-900/20 text-left transition group">
+              <i data-lucide="search" class="w-5 h-5 text-amber-600 mb-2 group-hover:scale-110 transition-transform"></i>
+              <div class="text-xs font-semibold">Explore Tools</div>
+              <div class="text-[11px] text-slate-500">Pandas, PyTorch, etc</div>
+            </button>
+          </div>
+
+          <!-- Featured Module Recommendation -->
+          <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 border border-blue-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <span class="text-[10px] uppercase tracking-wider font-bold text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded">Current Term Focus</span>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white mt-1">Supervised Machine Learning & Evaluation Metrics</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Classification, Cost Functions, Confusion Matrix & ROC Curves.</p>
+            </div>
+            <button onclick="openModuleDetail(3)" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold whitespace-nowrap shadow transition">
+              Resume Module
+            </button>
+          </div>
+        </div>
+
+        <!-- Deadlines & Upcoming Labs -->
+        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold flex items-center gap-2">
+              <i data-lucide="calendar" class="w-5 h-5 text-blue-500"></i> Upcoming Deadlines
+            </h2>
+            <span class="text-xs font-medium text-slate-500">Term II</span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="p-3 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 flex items-start gap-3">
+              <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 mt-0.5">
+                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+              </div>
+              <div class="flex-1 text-xs">
+                <div class="font-semibold text-slate-900 dark:text-white">Assignment 2: Regularized Regression</div>
+                <div class="text-slate-500">Ridge, Lasso & Cross-Validation</div>
+                <div class="mt-1 text-red-600 dark:text-red-400 font-medium">Due in 2 Days (Nov 02)</div>
+              </div>
+              <button onclick="loadAssignmentIntoRunner(1); switchTab('assignments');" class="text-xs font-semibold text-blue-600 hover:underline">Solve</button>
+            </div>
+
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-start gap-3">
+              <div class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 mt-0.5">
+                <i data-lucide="flask-conical" class="w-4 h-4"></i>
+              </div>
+              <div class="flex-1 text-xs">
+                <div class="font-semibold text-slate-900 dark:text-white">Lab 4: Random Forest Classifier</div>
+                <div class="text-slate-500">Ensemble methods evaluation</div>
+                <div class="mt-1 text-slate-500 font-medium">Due in 6 Days (Nov 06)</div>
+              </div>
+              <button onclick="openLabInEditor(3); switchTab('assignments');" class="text-xs font-semibold text-blue-600 hover:underline">Open</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. MODULES SECTION (ADD & VIEW) -->
+    <section id="tab-modules" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">Curriculum Modules</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Structured Data Science syllabus mapped to MBU CSE (Data Science) curriculum.</p>
+        </div>
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="relative flex-1 sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+            <input type="text" id="moduleSearchInput" oninput="filterModules()" placeholder="Search modules..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <button onclick="openModal('addModuleModal')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm flex items-center gap-2 shadow-sm transition whitespace-nowrap">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Module
+          </button>
+        </div>
+      </div>
+
+      <!-- Modules Card Grid -->
+      <div id="modulesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 3. USEFUL DATA SCIENCE TOOLS HUB -->
+    <section id="tab-tools" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">Data Science Tools & Ecosystem</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Curated software stacks, libraries, frameworks, and quick syntax previews.</p>
+        </div>
+        <div class="relative w-full sm:w-72">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+          <input type="text" id="toolsSearchInput" oninput="filterTools()" placeholder="Search library (e.g. Pandas, PyTorch)..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-2" id="toolsCategoryFilter">
+        <button onclick="setToolCategory('all')" data-cat="all" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm transition">All Domains</button>
+        <button onclick="setToolCategory('Wrangling')" data-cat="Wrangling" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Data Wrangling</button>
+        <button onclick="setToolCategory('Visualization')" data-cat="Visualization" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Visualization</button>
+        <button onclick="setToolCategory('Machine Learning')" data-cat="Machine Learning" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Machine Learning</button>
+        <button onclick="setToolCategory('Deep Learning')" data-cat="Deep Learning" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Deep Learning</button>
+        <button onclick="setToolCategory('MLOps & Big Data')" data-cat="MLOps & Big Data" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">MLOps & Big Data</button>
+        <button onclick="setToolCategory('IDE & Cloud')" data-cat="IDE & Cloud" class="tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Notebooks & IDE</button>
+      </div>
+
+      <!-- Tools Grid -->
+      <div id="toolsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 4. RESOURCES SECTION (ADD & VIEW) -->
+    <section id="tab-resources" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">Digital Resources Library</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Textbooks, benchmark datasets (Kaggle/UCI), cheat sheets, and academic whitepapers.</p>
+        </div>
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="relative flex-1 sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+            <input type="text" id="resourceSearchInput" oninput="filterResources()" placeholder="Search resources..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <button onclick="openModal('addResourceModal')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm flex items-center gap-2 shadow-sm transition whitespace-nowrap">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Resource
+          </button>
+        </div>
+      </div>
+
+      <!-- Type Filters -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1" id="resourceTypeFilter">
+        <button onclick="setResourceType('all')" data-type="all" class="res-type-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">All Types</button>
+        <button onclick="setResourceType('Dataset')" data-type="Dataset" class="res-type-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Datasets</button>
+        <button onclick="setResourceType('Textbook')" data-type="Textbook" class="res-type-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Textbooks</button>
+        <button onclick="setResourceType('CheatSheet')" data-type="CheatSheet" class="res-type-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Cheat Sheets</button>
+        <button onclick="setResourceType('Research Paper')" data-type="Research Paper" class="res-type-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Research Papers</button>
+      </div>
+
+      <!-- Resources Grid -->
+      <div id="resourcesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 5. LAB EXPERIMENTS SECTION -->
+    <section id="tab-labs" class="tab-pane hidden space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight">Data Science Practical Labs</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Curriculum lab experiments with step-by-step procedures, theories, and code sandbox launchers.</p>
+      </div>
+
+      <!-- Labs List Accordion / Card Deck -->
+      <div id="labsContainer" class="space-y-4">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 6. ASSIGNMENTS & INTERACTIVE CODE WORKSPACE -->
+    <section id="tab-assignments" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">Assignments & Code Lab</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Solve coursework assignments in our in-browser simulator with real output visualizer & submit for grading.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-xs font-medium text-slate-500">Active Task:</label>
+          <select id="assignmentSelector" onchange="onSelectAssignmentChange()" class="px-3 py-2 rounded-xl text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-medium focus:ring-2 focus:ring-blue-500">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Assignment Brief Card -->
+      <div id="assignmentBriefCard" class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+        <!-- Dynamic Assignment Details -->
+      </div>
+
+      <!-- Two-Column Code Workspace: Left Code Editor, Right Output & Simulation -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Code Editor Panel (7 Cols) -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+          <!-- Editor Header -->
+          <div class="px-4 py-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+              <span class="text-xs font-mono font-medium ml-2 text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="file-code" class="w-3.5 h-3.5 text-blue-500"></i> solution.py
+              </span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="resetEditorCode()" title="Reset to template" class="px-2.5 py-1 text-xs rounded font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition flex items-center gap-1">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset
+              </button>
+              <button onclick="runCode()" class="px-3.5 py-1 text-xs rounded-lg font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-sm">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Run Code
+              </button>
+            </div>
+          </div>
+
+          <!-- Code Textarea with mono font -->
+          <div class="relative flex-1 min-h-[360px] bg-slate-950 font-mono text-sm text-slate-100">
+            <textarea id="codeEditorArea" spellcheck="false" class="w-full h-full min-h-[380px] p-4 bg-transparent text-emerald-400 focus:outline-none resize-none font-mono text-xs leading-relaxed selection:bg-blue-600/40"></textarea>
+          </div>
+
+          <!-- Editor Footer Action Bar -->
+          <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-[11px] text-slate-500 flex items-center gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> Python 3.11 Emulated Runtime
+            </div>
+            <button onclick="submitAssignment()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-2 shadow-md transition transform active:scale-95">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i> Submit & Save to Profile
+            </button>
+          </div>
+        </div>
+
+        <!-- Output Console & Result Visualizer (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4">
+          <!-- Terminal / Stdout -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+            <div class="px-4 py-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2 text-xs font-semibold">
+                <i data-lucide="terminal" class="w-4 h-4 text-emerald-500"></i> Execution Terminal & Stdout
+              </div>
+              <button onclick="clearConsole()" class="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">Clear</button>
+            </div>
+            <div id="outputConsole" class="p-4 bg-slate-950 text-slate-200 font-mono text-xs h-52 overflow-y-auto space-y-1">
+              <div class="text-slate-500 italic">// Click 'Run Code' or test cases to simulate output...</div>
+            </div>
+          </div>
+
+          <!-- Tabular Data or Metric Plot Simulation Preview -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-purple-500"></i> Visualizer & Metric Preview
+              </h3>
+              <span id="testCaseBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">Awaiting Run</span>
+            </div>
+
+            <!-- Visualization Canvas -->
+            <div class="relative w-full h-44 bg-slate-50 dark:bg-slate-950/60 rounded-xl p-2 flex items-center justify-center border border-slate-100 dark:border-slate-800">
+              <canvas id="resultChart" class="w-full h-full"></canvas>
+            </div>
+
+            <!-- Dynamic Metrics Summary Box -->
+            <div id="metricsBox" class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="p-2 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                <div class="text-[10px] text-slate-400">Accuracy</div>
+                <div class="font-bold text-slate-800 dark:text-slate-200" id="metricAccuracy">--</div>
+              </div>
+              <div class="p-2 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                <div class="text-[10px] text-slate-400">F1-Score</div>
+                <div class="font-bold text-slate-800 dark:text-slate-200" id="metricF1">--</div>
+              </div>
+              <div class="p-2 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                <div class="text-[10px] text-slate-400">Loss / MSE</div>
+                <div class="font-bold text-slate-800 dark:text-slate-200" id="metricLoss">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Submission History Record -->
+      <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <i data-lucide="history" class="w-5 h-5 text-blue-500"></i> My Submitted Solutions
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase">
+              <tr>
+                <th class="py-2.5 px-3">Assignment</th>
+                <th class="py-2.5 px-3">Timestamp</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3">Accuracy</th>
+                <th class="py-2.5 px-3">Grade Awarded</th>
+                <th class="py-2.5 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="submissionHistoryBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. USER PROFILE SECTION -->
+    <section id="tab-profile" class="tab-pane hidden space-y-6">
+      <div class="rounded-[28px] border border-slate-700 bg-[#071a2d] p-4 shadow-[0_25px_60px_rgba(15,23,42,0.3)]">
+        <div class="rounded-[24px] bg-gradient-to-r from-[#f7a142] via-[#d86b43] to-[#4d3d7a] p-4 md:p-6">
+          <div class="flex flex-col md:flex-row items-center md:items-start gap-5">
+            <div class="relative w-28 h-28 rounded-full border-4 border-white/80 bg-white/90 overflow-hidden shadow-xl shrink-0">
+              <img id="profileAvatarImg" src="./evuri_profile_photo.png" alt="Student avatar" class="w-full h-full object-cover">
+              <label for="avatarUploadInput" class="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b13d] text-slate-900 shadow-md cursor-pointer hover:scale-105 transition" title="Change Photo">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+                <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" onchange="handleAvatarChange(event)">
+              </label>
+            </div>
+
+            <div class="flex-1 min-w-0 text-slate-100">
+              <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight" id="profileNameDisplay">Evuri Harika</h2>
+              <div class="mt-3 flex flex-wrap items-center gap-3 text-sm md:text-base">
+                <span class="text-slate-200">Roll Number: <span id="profileRollDisplay" class="font-semibold text-white">24102A030154</span></span>
+                <span id="profileStatusBadge" class="rounded-full bg-emerald-200/90 px-3 py-1 text-xs font-bold text-emerald-900 shadow-sm">Active</span>
+              </div>
+              <div class="mt-2 text-sm md:text-lg text-slate-100/90" id="profileDeptDisplay">B.Tech - Computer Science and Engineering (Data Science)</div>
+              <div class="mt-1 text-sm text-slate-100/85">Mohan Babu University (MBU)</div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 text-slate-100">
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Institution</div>
+              <div class="mt-2 text-lg font-bold" id="profileInstitutionValue">Mohan Babu University (MBU)</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Current Semester</div>
+              <div class="mt-2 text-lg font-bold" id="profileSemesterValue">5</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Faculty Name</div>
+              <div class="mt-2 text-lg font-bold" id="profileFacultyValue">Bosubabu</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Degree</div>
+              <div class="mt-2 text-lg font-bold" id="profileDegreeValue">B.Tech</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Branch</div>
+              <div class="mt-2 text-lg font-bold" id="profileBranchValue">Computer Science and Engineering</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-slate-900/20 p-3">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-200/80">Specialization</div>
+              <div class="mt-2 text-lg font-bold" id="profileSpecializationValue">Data Science</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/50 p-5">
+            <h3 class="text-2xl font-bold text-white">Profile Photo</h3>
+            <p class="mt-2 text-sm text-slate-300">Your personal profile picture. JPG, PNG, or WEBP; up to 10 MB.</p>
+            <div class="mt-5 flex justify-center">
+              <div class="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800 shadow-xl w-64 h-64">
+                <img id="profileMainPhoto" src="./evuri_profile_photo.png" alt="Profile preview" class="w-full h-full object-cover">
+              </div>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <label for="avatarUploadInput" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f6b13d] px-4 py-2.5 font-semibold text-slate-900 shadow hover:brightness-110 cursor-pointer transition">
+                <i data-lucide="upload" class="w-4 h-4"></i> Replace Profile Photo
+              </label>
+              <button type="button" onclick="document.getElementById('profileAvatarImg').src = './evuri_profile_photo.png'; document.getElementById('profileMainPhoto').src = './evuri_profile_photo.png';" class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 font-semibold text-slate-200 hover:bg-slate-700 transition">Remove Photo</button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-700 bg-slate-900/50 p-5">
+            <h3 class="text-2xl font-bold text-white">University ID Card</h3>
+            <p class="mt-2 text-sm text-slate-300">Upload a clear photograph or scan of your ID card.</p>
+            <div class="mt-5 flex justify-center">
+              <div class="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800 shadow-xl w-full max-w-[420px]">
+                <img id="profileIdCardImage" src="./evuri_id_card.png" alt="Student ID card" class="w-full h-auto object-cover">
+              </div>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f6b13d] px-4 py-2.5 font-semibold text-slate-900 shadow hover:brightness-110 transition">
+                <i data-lucide="upload" class="w-4 h-4"></i> Replace ID Card Photo
+              </button>
+              <button type="button" class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 font-semibold text-slate-200 hover:bg-slate-700 transition">Remove ID Card</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-900/50 p-5">
+          <h3 class="text-xl font-bold text-white">About & Academic Bio</h3>
+          <p class="mt-3 text-sm leading-relaxed text-slate-300" id="profileBioDisplay">Aspiring data science professional focused on analytics, machine learning, and real-world problem solving through data-driven insights.</p>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-300">
+            <div class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2">
+              <i data-lucide="mail" class="w-4 h-4 text-blue-400"></i>
+              <span id="profileEmailDisplay">evuriharika05@gmail.com</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2">
+              <i data-lucide="map-pin" class="w-4 h-4 text-red-400"></i>
+              <span>Tirupati Campus, Andhra Pradesh</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2">
+              <i data-lucide="github" class="w-4 h-4 text-slate-200"></i>
+              <a href="#" id="profileGithubLink" class="text-blue-300 hover:underline">github.com/harika</a>
+            </div>
+            <div class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2">
+              <i data-lucide="linkedin" class="w-4 h-4 text-blue-400"></i>
+              <a href="#" id="profileLinkedinLink" class="text-blue-300 hover:underline">linkedin.com/in/evuri-harika</a>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Technical Skills</div>
+            <div class="mt-3 flex flex-wrap gap-2" id="profileSkillsContainer">
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">Python</span>
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">Data Science</span>
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">Machine Learning</span>
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">SQL</span>
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">Visualization</span>
+              <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">AI/ML</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800 dark:text-slate-200">Mohan Babu University (MBU)</span> • Department of Data Science & Artificial Intelligence
+      </div>
+      <div>Designed for Academic Excellence • Sree Sainath Nagar, Tirupati, A.P.</div>
+    </div>
+  </footer>
+
+  <div id="pdfReaderOverlay" class="pdf-reader-backdrop fixed inset-0 z-[70] hidden">
+    <div class="absolute inset-0"></div>
+    <div class="relative mx-auto flex h-full max-w-7xl flex-col px-3 py-4 sm:px-5">
+      <div class="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-white shadow-2xl">
+        <div class="min-w-0">
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-400">Flipbook Reader</div>
+          <div id="pdfReaderTitle" class="truncate text-base font-bold sm:text-lg">Document</div>
+        </div>
+        <button id="pdfReaderCloseBtn" type="button" class="rounded-xl border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm font-semibold text-slate-200 hover:bg-slate-700">Close Reader</button>
+      </div>
+
+      <div class="flex-1 overflow-hidden rounded-[26px] border border-slate-700 bg-[#0b3b3b] p-3 sm:p-5">
+        <div id="pdfReaderLoading" class="hidden h-full w-full items-center justify-center text-sm font-semibold text-slate-200">Loading document...</div>
+        <div id="pdfReaderBook" class="pdf-reader-book h-full w-full overflow-hidden"></div>
+      </div>
+
+      <div class="pdf-reader-controls mt-3 flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-900/90 px-3 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-2">
+          <button id="pdfPrevBtn" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-600 disabled:opacity-40 disabled:hover:bg-slate-700" disabled>Previous</button>
+          <button id="pdfNextBtn" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-600 disabled:opacity-40 disabled:hover:bg-slate-700">Next</button>
+        </div>
+
+        <div id="pdfPageInfo" class="text-center text-xs font-medium text-slate-200 sm:text-sm">Pages 0?0 of 0</div>
+
+        <div class="flex items-center justify-end gap-2">
+          <a id="pdfOriginalLink" href="#" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-400">Open Original PDF</a>
+          <button id="pdfCloseBtn" type="button" class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. ADD MODULE MODAL -->
+  <div id="addModuleModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-lg font-bold">Add Curriculum Module</h3>
+        <button onclick="closeModal('addModuleModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="handleCreateModule(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Module Title</label>
+          <input type="text" id="newModTitle" required placeholder="e.g. Natural Language Processing & Transformers" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Course Code</label>
+            <input type="text" id="newModCode" required placeholder="e.g. 22CS402" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Difficulty</label>
+            <select id="newModDifficulty" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500">
+              <option>Foundational</option>
+              <option selected>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Duration (Weeks)</label>
+            <input type="text" id="newModDuration" required placeholder="e.g. 4 Weeks" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Category Tag</label>
+            <input type="text" id="newModCategory" required placeholder="e.g. Deep Learning" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Course Description</label>
+          <textarea id="newModDesc" rows="3" required placeholder="Describe objectives, scope and key outcomes..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Subtopics (Comma separated)</label>
+          <input type="text" id="newModSubtopics" placeholder="Tokenization, Word2Vec, Attention Mechanism, BERT" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('addModuleModal')" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Save Module</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. ADD RESOURCE MODAL -->
+  <div id="addResourceModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-lg font-bold">Add Digital Resource</h3>
+        <button onclick="closeModal('addResourceModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="handleCreateResource(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Resource Title</label>
+          <input type="text" id="newResTitle" required placeholder="e.g. Hands-On Machine Learning with Scikit-Learn & PyTorch" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Type</label>
+            <select id="newResType" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+              <option>Textbook</option>
+              <option>Dataset</option>
+              <option>CheatSheet</option>
+              <option>Research Paper</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Author / Publisher</label>
+            <input type="text" id="newResAuthor" placeholder="e.g. Aurélien Géron / O'Reilly" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Target URL / External Link</label>
+          <input type="url" id="newResUrl" required placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Tags (Comma-separated)</label>
+          <input type="text" id="newResTags" placeholder="Scikit-Learn, PyTorch, Deep Learning, ML" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Brief Overview</label>
+          <textarea id="newResDesc" rows="3" required placeholder="Summary of contents or instructions to explore..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('addResourceModal')" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Publish Resource</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. EDIT PROFILE MODAL -->
+  <div id="editProfileModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-lg font-bold">Edit Profile Details</h3>
+        <button onclick="closeModal('editProfileModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="handleSaveProfile(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1">Student Full Name</label>
+          <input type="text" id="editProfName" required class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Registration / Roll No</label>
+            <input type="text" id="editProfRoll" required class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">CGPA</label>
+            <input type="text" id="editProfCGPA" required class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">University Email</label>
+          <input type="email" id="editProfEmail" required class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Bio Statement</label>
+          <textarea id="editProfBio" rows="3" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">GitHub Username/URL</label>
+            <input type="text" id="editProfGithub" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">LinkedIn Username/URL</label>
+            <input type="text" id="editProfLinkedin" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Skills (comma-separated)</label>
+          <input type="text" id="editProfSkills" placeholder="Python, PyTorch, Pandas, Scikit-learn" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('editProfileModal')" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-800">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. TOOL SNIPPET PREVIEW MODAL -->
+  <div id="toolSnippetModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold" id="snippetModalTitle">Tool Snippet</h3>
+          <p class="text-xs text-slate-500" id="snippetModalCat">Syntax Reference</p>
+        </div>
+        <button onclick="closeModal('toolSnippetModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="bg-slate-950 p-4 rounded-xl font-mono text-xs text-emerald-400 overflow-x-auto relative">
+        <button onclick="copySnippetCode()" class="absolute top-3 right-3 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700">Copy</button>
+        <pre id="snippetModalCode" class="whitespace-pre"></pre>
+      </div>
+
+      <div class="flex justify-between items-center text-xs">
+        <a id="snippetDocLink" href="#" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1 font-semibold">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Read Official Docs
+        </a>
+        <button onclick="loadSnippetIntoCodeLab()" class="px-4 py-1.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700">Open in Code Lab</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
+  <script>
+    /* ----------------------------------------------------
+       APPLICATION STATE & LOCAL STORAGE INITIALIZATION
+    ---------------------------------------------------- */
+    const STORAGE_KEY_PREFIX = 'MBU_DS_LIB_';
+
+    // 1. Initial Modules Dataset
+    const defaultModules = [
+      {
+        id: 1,
+        code: 'R20DS501',
+        title: 'Introduction to Data Science',
+        category: 'Foundations of Data Science',
+        difficulty: 'Foundational',
+        duration: '4 Weeks',
+        progress: 100,
+        description: 'Introduces the data science lifecycle, real-world problem formulation, data types, ethical considerations, and the role of statistics, programming, and visualization in modern analytics.',
+        subtopics: ['Data Science Workflow', 'Data Types & Sources', 'Problem Framing', 'Ethics & Governance', 'Python Ecosystem for Data Science'],
+        pdfUrl: './Introduction-to-Datascience-R20DS501_without_first_5_pages.pdf'
+      },
+      {
+        id: 2,
+        code: 'R20DS502',
+        title: 'Data Collection & Preprocessing',
+        category: 'Data Engineering',
+        difficulty: 'Foundational',
+        duration: '5 Weeks',
+        progress: 90,
+        description: 'Covers acquisition from structured and unstructured sources, cleaning methods, missing value treatment, normalization, encoding, and transformation pipelines for reliable analysis.',
+        subtopics: ['Data Sources & Acquisition', 'Missing Values', 'Data Cleaning', 'Normalization & Standardization', 'Feature Encoding & Transformation'],
+        pdfUrl: './Module_2_Data_Collection_Preprocessing.pdf'
+      },
+      {
+        id: 3,
+        code: 'R20DS503',
+        title: 'Exploratory Data Analysis & Visualization',
+        category: 'EDA & Insight Generation',
+        difficulty: 'Intermediate',
+        duration: '5 Weeks',
+        progress: 85,
+        description: 'Focuses on descriptive statistics, distribution analysis, correlation, outlier detection, and visual storytelling using charts and dashboards.',
+        subtopics: ['Descriptive Statistics', 'Data Distribution', 'Outlier Analysis', 'Visualization Techniques', 'Storytelling with Data'],
+        pdfUrl: './Module_3_Exploratory_Data_Analysis_Visualization.pdf'
+      },
+      {
+        id: 4,
+        code: 'R20DS504',
+        title: 'Statistics & Machine Learning',
+        category: 'Predictive Analytics',
+        difficulty: 'Intermediate',
+        duration: '6 Weeks',
+        progress: 75,
+        description: 'Introduces probability, statistical inference, hypothesis testing, supervised learning models, and evaluation techniques for predictive decision-making.',
+        subtopics: ['Probability & Sampling', 'Hypothesis Testing', 'Regression Models', 'Classification Models', 'Model Evaluation & Validation'],
+        pdfUrl: './Module_4_Statistics_Machine_Learning.pdf'
+      },
+      {
+        id: 5,
+        code: 'R20DS505',
+        title: 'Advanced Data Science Applications',
+        category: 'Applied AI & Analytics',
+        difficulty: 'Advanced',
+        duration: '6 Weeks',
+        progress: 60,
+        description: 'Applies data science to advanced problems including forecasting, recommendation systems, text analytics, computer vision basics, and decision-support systems.',
+        subtopics: ['Time Series & Forecasting', 'Text Analytics', 'Computer Vision Basics', 'Recommendation Systems', 'Business Intelligence Applications'],
+        pdfUrl: './Module_5_Advanced_Data_Science_Applications.pdf'
+      }
+    ];
+
+    // 2. Useful DS Tools Catalog
+    const defaultTools = [
+      {
+        name: 'Pandas',
+        domain: 'Wrangling',
+        role: 'Data Structures & Analysis',
+        badge: 'Essential',
+        url: 'https://pandas.pydata.org/docs/',
+        desc: 'Fast, flexible, and expressive open-source data analysis and manipulation tool built on top of Python.',
+        snippet: `import pandas as pd\n\n# Load dataset & compute grouped summaries\ndf = pd.read_csv('dataset.csv')\nsummary = df.groupby('category')['revenue'].agg(['mean', 'sum'])\nprint(summary.head())`
+      },
+      {
+        name: 'NumPy',
+        domain: 'Wrangling',
+        role: 'Numerical & Matrix Math',
+        badge: 'Core',
+        url: 'https://numpy.org/doc/',
+        desc: 'The fundamental package for scientific computing with multi-dimensional array and matrix processing.',
+        snippet: `import numpy as np\n\n# Vectorized matrix multiplication & eigen decomposition\nA = np.random.randn(3, 3)\neigenvalues, eigenvectors = np.linalg.eig(A)\nprint("Eigenvalues:", eigenvalues)`
+      },
+      {
+        name: 'Polars',
+        domain: 'Wrangling',
+        role: 'Blazing Fast DataFrames',
+        badge: 'Modern',
+        url: 'https://pola.rs/',
+        desc: 'Lightning-fast DataFrame library implemented in Rust with multi-threaded query execution and lazy evaluation.',
+        snippet: `import polars as pl\n\n# Lazy execution pipeline\nq = (pl.scan_csv("data.csv")\n     .filter(pl.col("age") > 25)\n     .group_by("department").len())\nprint(q.collect())`
+      },
+      {
+        name: 'Matplotlib & Seaborn',
+        domain: 'Visualization',
+        role: 'Statistical Plotting',
+        badge: 'Standard',
+        url: 'https://seaborn.pydata.org/',
+        desc: 'Python visualization library based on matplotlib providing high-level interface for statistical graphics.',
+        snippet: `import seaborn as sns\nimport matplotlib.pyplot as plt\n\n# Generate correlation heatmap\nsns.heatmap(df.corr(), annot=True, cmap='Blues')\nplt.title('Feature Correlation')\nplt.show()`
+      },
+      {
+        name: 'Plotly',
+        domain: 'Visualization',
+        role: 'Interactive Web Charts',
+        badge: 'Interactive',
+        url: 'https://plotly.com/python/',
+        desc: 'Graphing library that makes interactive, publication-quality graphs online with hover metrics & zoom.',
+        snippet: `import plotly.express as px\n\nfig = px.scatter(df, x='gdpPercap', y='lifeExp', size='pop', color='continent')\nfig.show()`
+      },
+      {
+        name: 'Scikit-Learn',
+        domain: 'Machine Learning',
+        role: 'Classical ML Algorithms',
+        badge: 'Must-Know',
+        url: 'https://scikit-learn.org/stable/',
+        desc: 'Simple and efficient tools for predictive data analysis, model evaluation, preprocessing, and classification.',
+        snippet: `from sklearn.ensemble import RandomForestClassifier\nfrom sklearn.metrics import classification_report\n\nclf = RandomForestClassifier(n_estimators=100)\nclf.fit(X_train, y_train)\ny_pred = clf.predict(X_test)\nprint(classification_report(y_test, y_pred))`
+      },
+      {
+        name: 'XGBoost',
+        domain: 'Machine Learning',
+        role: 'Gradient Boosted Trees',
+        badge: 'Kaggle Favorite',
+        url: 'https://xgboost.readthedocs.io/',
+        desc: 'An optimized distributed gradient boosting library designed to be highly efficient, flexible, and portable.',
+        snippet: `import xgboost as xgb\n\nmodel = xgb.XGBClassifier(n_estimators=100, learning_rate=0.05)\nmodel.fit(X_train, y_train)\npreds = model.predict(X_test)`
+      },
+      {
+        name: 'PyTorch',
+        domain: 'Deep Learning',
+        role: 'Deep Learning & Tensors',
+        badge: 'Industry Leading',
+        url: 'https://pytorch.org/docs/',
+        desc: 'Optimized tensor library for deep learning using GPUs and CPUs with dynamic automatic differentiation.',
+        snippet: `import torch\nimport torch.nn as nn\n\nclass Net(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.fc = nn.Linear(10, 2)\n    def forward(self, x):\n        return self.fc(x)\n\nmodel = Net()\nx = torch.randn(5, 10)\nprint(model(x))`
+      },
+      {
+        name: 'TensorFlow & Keras',
+        domain: 'Deep Learning',
+        role: 'Production Deep Learning',
+        badge: 'Enterprise',
+        url: 'https://www.tensorflow.org/',
+        desc: 'End-to-end open source platform for machine learning with high-level user friendly Keras API.',
+        snippet: `from tensorflow import keras\n\nmodel = keras.Sequential([\n    keras.layers.Dense(64, activation='relu'),\n    keras.layers.Dense(1, activation='sigmoid')\n])\nmodel.compile(optimizer='adam', loss='binary_crossentropy')`
+      },
+      {
+        name: 'Apache Spark / PySpark',
+        domain: 'MLOps & Big Data',
+        role: 'Distributed Big Data',
+        badge: 'Big Data',
+        url: 'https://spark.apache.org/docs/latest/api/python/',
+        desc: 'Multi-language engine for executing data engineering, data science, and machine learning on single-node or clusters.',
+        snippet: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName('MBU_DS').getOrCreate()\ndf = spark.read.csv('huge_log.csv', header=True)\ndf.groupBy('status').count().show()`
+      },
+      {
+        name: 'MLflow',
+        domain: 'MLOps & Big Data',
+        role: 'ML Lifecycle Tracking',
+        badge: 'MLOps',
+        url: 'https://mlflow.org/',
+        desc: 'Platform to manage the ML lifecycle including experiment tracking, reproducibility, and deployment.',
+        snippet: `import mlflow\n\nwith mlflow.start_run():\n    mlflow.log_param("alpha", 0.5)\n    mlflow.log_metric("rmse", 0.23)\n    mlflow.sklearn.log_model(model, "model")`
+      },
+      {
+        name: 'JupyterLab & VS Code',
+        domain: 'IDE & Cloud',
+        role: 'Notebooks & Interactive Dev',
+        badge: 'Workflow',
+        url: 'https://jupyter.org/',
+        desc: 'The gold standard web-based interactive computational environment for Python notebooks and data exploration.',
+        snippet: `# Run code cells iteratively\n%matplotlib inline\nimport pandas as pd\ndf = pd.read_csv('mbu_research.csv')\ndf.describe()`
+      }
+    ];
+
+    // 3. Digital Resources Catalog
+    const defaultResources = [
+      {
+        id: 1,
+        title: 'Kaggle Titanic - Machine Learning from Disaster',
+        type: 'Dataset',
+        category: 'Binary Classification',
+        author: 'Kaggle Community',
+        url: 'https://www.kaggle.com/c/titanic/data',
+        tags: ['Benchmark', 'CSV', 'Classification', 'Tabular'],
+        desc: 'The quintessential benchmark dataset for learning classification pipelines, handling missing age/cabin data, and feature engineering.'
+      },
+      {
+        id: 2,
+        title: 'UCI Machine Learning Repository: Breast Cancer Wisconsin',
+        type: 'Dataset',
+        category: 'Medical Diagnostics',
+        author: 'Dr. William H. Wolberg',
+        url: 'https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic',
+        tags: ['Diagnostic', 'Medical', 'High-Precision', 'Tabular'],
+        desc: 'Features computed from digitized images of fine needle aspirate (FNA) of breast masses. Superb for testing logistic regression and SVMs.'
+      },
+      {
+        id: 3,
+        title: 'An Introduction to Statistical Learning with Python (ISLP)',
+        type: 'Textbook',
+        category: 'Statistical Theory',
+        author: 'Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani',
+        url: 'https://www.statlearning.com/',
+        tags: ['Textbook', 'Python', 'Free PDF', 'Core Curriculum'],
+        desc: 'The official textbook companion used in MBU Machine Learning courses. Includes thorough mathematical derivations and Python lab notebooks.'
+      },
+      {
+        id: 4,
+        title: 'Comprehensive Scikit-Learn Algorithm & Syntax Cheat Sheet',
+        type: 'CheatSheet',
+        category: 'Quick Reference',
+        author: 'DataCamp / Scikit-Learn Org',
+        url: 'https://scikit-learn.org/stable/tutorial/machine_learning_map/index.html',
+        tags: ['CheatSheet', 'Estimators', 'Transformers', 'Pipelines'],
+        desc: 'Flowchart cheat-sheet helping practitioners decide which regression, clustering, dimensionality reduction, or classification model fits.'
+      },
+      {
+        id: 5,
+        title: 'Attention Is All You Need (The Transformer Architecture)',
+        type: 'Research Paper',
+        category: 'Deep Learning',
+        author: 'Vaswani et al. (Google Brain)',
+        url: 'https://arxiv.org/abs/1706.03762',
+        tags: ['Transformer', 'Deep Learning', 'Seminal Paper', 'NLP'],
+        desc: 'The groundbreaking research paper introducing the Transformer self-attention architecture that powers modern LLMs and BERT.'
+      },
+      {
+        id: 6,
+        title: 'Deep Learning with Python (2nd Edition)',
+        type: 'Textbook',
+        category: 'Deep Learning',
+        author: 'François Chollet (Creator of Keras)',
+        url: 'https://www.manning.com/books/deep-learning-with-python-second-edition',
+        tags: ['Keras', 'Neural Networks', 'Computer Vision'],
+        desc: 'Hands-on practical intuition behind neural networks, generative AI, and computer vision with readable Python code.'
+      }
+    ];
+
+    // 4. Lab Experiments Guide
+    const defaultLabs = [
+      {
+        id: 1,
+        title: 'Data Preprocessing, Outlier Detection & Imputation',
+        code: 'DS-LAB-01',
+        aim: 'To preprocess raw numerical datasets, perform missing value imputation (Mean/Median/KNN), and detect anomalous outliers using Z-score and Tukey’s Interquartile Range (IQR) technique.',
+        theory: 'Raw data contains noise, missing records, and extreme anomalies that distort statistical moments. The Z-Score formula Z = (X - μ) / σ identifies samples exceeding |Z| > 3. Alternatively, IQR = Q3 - Q1 flags data points falling outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR].',
+        dataset: 'Automobile Sensor & Churn Dataset with synthetic noise',
+        procedure: [
+          'Load dataset into DataFrame structures.',
+          'Identify missing percentages per column and apply median imputation.',
+          'Compute first (Q1) and third (Q3) quartiles for continuous features.',
+          'Filter out samples exceeding IQR upper and lower whiskers.',
+          'Verify normal distribution parameters post-cleaning.'
+        ],
+        sampleSnippet: `# Lab 1: Outlier Detection via IQR\nimport numpy as np\n\ndata = np.array([22, 25, 23, 24, 26, 120, 24, 25, -40, 22])\nq25, q75 = np.percentile(data, [25, 75])\niqr = q75 - q25\nlower, upper = q25 - 1.5 * iqr, q75 + 1.5 * iqr\ncleaned = [x for x in data if lower <= x <= upper]\nprint(f"Original: {data}")\nprint(f"Cleaned ({len(cleaned)} items): {cleaned}")`
+      },
+      {
+        id: 2,
+        title: 'Exploratory Data Analysis & Feature Engineering on Customer Churn',
+        code: 'DS-LAB-02',
+        aim: 'To conduct exhaustive exploratory analysis on multi-attribute customer churn data, compute feature correlations, and engineer log-transformations and one-hot encoded variables.',
+        theory: 'Feature engineering transforms raw attributes into formats that better represent the underlying problem to predictive algorithms. Categorical encoding converts string nominals into numeric vectors.',
+        dataset: 'Telecom Customer Churn (Tenure, Monthly Charges, Tech Support)',
+        procedure: [
+          'Inspect dataframe data types and null counts.',
+          'Encode categorical labels using One-Hot encoding.',
+          'Apply logarithmic transformation on skewed monetary attributes.',
+          'Compute Pearson correlation matrix against the churn outcome.'
+        ],
+        sampleSnippet: `# Lab 2: Feature Normalization\nimport numpy as np\n\nraw_charges = np.array([19.5, 53.8, 108.4, 20.0, 75.3])\n# Log-scaling feature\nlog_charges = np.log1p(raw_charges)\nprint("Scaled charges:", np.round(log_charges, 3))`
+      },
+      {
+        id: 3,
+        title: 'Binary Logistic Regression Classifier with Evaluation Metrics',
+        code: 'DS-LAB-03',
+        aim: 'To formulate binary logistic regression from scratch using the Sigmoid activation function and evaluate accuracy, Precision, Recall, and F1-Score.',
+        theory: 'Logistic regression models probability P(Y=1|X) = 1 / (1 + exp(-(wX + b))). The model minimizes Binary Cross-Entropy loss via gradient descent.',
+        dataset: 'Simulated Patient Clinical Features (Glucose, BMI, Age)',
+        procedure: [
+          'Formulate the sigmoid function σ(z) = 1 / (1 + e^-z).',
+          'Implement forward pass to calculate probabilistic predictions.',
+          'Calculate Confusion Matrix: TP, FP, TN, FN.',
+          'Compute F1-Score: 2 * (Precision * Recall) / (Precision + Recall).'
+        ],
+        sampleSnippet: `# Lab 3: Logistic Regression Sigmoid & Metrics\nimport numpy as np\n\ndef sigmoid(z):\n    return 1 / (1 + np.exp(-z))\n\nweights = np.array([0.8, -0.4])\nbias = -0.1\nx_sample = np.array([1.5, 0.5])\nprob = sigmoid(np.dot(x_sample, weights) + bias)\nprint(f"Prediction probability: {prob:.4f} -> Class: {int(prob >= 0.5)}")`
+      },
+      {
+        id: 4,
+        title: 'Decision Tree & Random Forest Classifier on Wisconsin Breast Cancer',
+        code: 'DS-LAB-04',
+        aim: 'To construct decision tree splits based on Gini Impurity and assemble an ensemble Random Forest to maximize diagnostic accuracy.',
+        theory: 'Ensemble bagging trains multiple de-correlated decision trees on bootstrap subsets. Aggregating votes reduces variance without increasing bias.',
+        dataset: 'Breast Cancer Wisconsin FNA Features',
+        procedure: [
+          'Calculate Gini Impurity for binary splits: 1 - sum(p_i^2).',
+          'Construct bootstrap replicates of training samples.',
+          'Fit ensemble decision trees and tally majority class vote.',
+          'Compare test accuracy against a single unpruned decision tree.'
+        ],
+        sampleSnippet: `# Lab 4: Gini Impurity Calculation\ndef gini_impurity(p1, p2):\n    return 1 - (p1**2 + p2**2)\n\nprint("Pure Node Impurity:", gini_impurity(1.0, 0.0))\nprint("Balanced Node Impurity:", gini_impurity(0.5, 0.5))`
+      },
+      {
+        id: 5,
+        title: 'K-Means Clustering & Principal Component Analysis (PCA)',
+        code: 'DS-LAB-05',
+        aim: 'To group unlabelled multi-dimensional observations using iterative K-Means clustering and visualize clusters across the first two Principal Components.',
+        theory: 'K-Means partitions n observations into k clusters where each sample belongs to the cluster with the nearest mean Euclidean centroid. PCA rotates coordinate axes along directions of maximal variance.',
+        dataset: 'Customer Segmentation / Mall Customers Spending Dataset',
+        procedure: [
+          'Initialize k centroids at random coordinates.',
+          'Assign observations to the nearest centroid.',
+          'Recalculate centroids as the arithmetic mean of assigned points.',
+          'Repeat until convergence or inertia difference < threshold.',
+          'Project high-dimensional data onto 2D PCA eigenvectors.'
+        ],
+        sampleSnippet: `# Lab 5: Centroid Distance calculation\nimport numpy as np\npoint = np.array([2.5, 3.5])\ncentroid = np.array([2.0, 3.0])\ndist = np.linalg.norm(point - centroid)\nprint(f"Euclidean distance: {dist:.4f}")`
+      },
+      {
+        id: 6,
+        title: 'Sentiment Analysis using Natural Language Processing (TF-IDF & Naive Bayes)',
+        code: 'DS-LAB-06',
+        aim: 'To convert unstructured textual product reviews into Term Frequency - Inverse Document Frequency (TF-IDF) vectors and classify sentiment with Multinomial Naive Bayes.',
+        theory: 'TF-IDF weighs term frequency by inverse document frequency to dampen ubiquitous words. Multinomial Naive Bayes uses Bayes theorem with conditional independence assumption.',
+        dataset: 'IMDb Movie Reviews Dataset (Positive/Negative)',
+        procedure: [
+          'Tokenize sentences, remove stopwords, and apply lemmatization.',
+          'Build vocabulary dictionary and compute document frequencies.',
+          'Construct TF-IDF sparse matrix representation.',
+          'Compute prior and likelihood probabilities for classification.'
+        ],
+        sampleSnippet: `# Lab 6: Simple TF-IDF Formulation\nimport numpy as np\n\ntf = 3 / 20  # term occurs 3 times in 20-word document\nidf = np.log(100 / (1 + 10)) # 100 total docs, 10 contain word\ntfidf = tf * idf\nprint(f"TF-IDF Weight: {tfidf:.4f}")`
+      }
+    ];
+
+    // 5. Assignments List
+    const defaultAssignments = [
+      {
+        id: 1,
+        title: 'Assignment 1: Introduction to Data Science & Lifecycle',
+        dueDate: 'Nov 04, 2026',
+        maxMarks: 100,
+        problem: 'Explain the end-to-end data science workflow from problem definition to deployment. Use a real-world business use case such as customer churn prediction, sales forecasting, or fraud detection, and identify the key stages, data sources, and evaluation metrics involved.',
+        constraints: 'Your answer must include at least five workflow stages, one relevant dataset example, and a brief explanation of how business decisions depend on model output.',
+        sampleCode: `# ========================================================
+# Assignment 1: Data Science Lifecycle Demonstration
+# ========================================================
+import pandas as pd
+
+# Example dataset: customer retention data
+customer_data = pd.DataFrame({
+    'customer_id': [101, 102, 103, 104, 105],
+    'tenure_months': [8, 24, 12, 36, 5],
+    'monthly_charges': [45, 78, 52, 90, 38],
+    'is_churn': [1, 0, 1, 0, 1]
+})
+
+# Step 1: Check data quality
+print('Dataset shape:', customer_data.shape)
+print('Missing values:\n', customer_data.isnull().sum())
+
+# Step 2: Summarize key business features
+avg_tenure = customer_data['tenure_months'].mean()
+avg_charge = customer_data['monthly_charges'].mean()
+churn_rate = customer_data['is_churn'].mean()
+
+print(f'Average tenure: {avg_tenure:.2f} months')
+print(f'Average monthly charges: {avg_charge:.2f}')
+print(f'Observed churn rate: {churn_rate:.2f}')
+
+# Step 3: Convert to a business insight
+if churn_rate > 0.4:
+    print('Action: Retention campaign required.')
+else:
+    print('Action: Continue monitoring customer behavior.')
+`
+      },
+      {
+        id: 2,
+        title: 'Assignment 2: Data Collection, Cleaning & Preprocessing',
+        dueDate: 'Nov 11, 2026',
+        maxMarks: 100,
+        problem: 'Work with a raw dataset containing missing values, duplicate records, inconsistent labels, and outlier values. Build a preprocessing pipeline that handles these issues before analysis and modeling.',
+        constraints: 'Demonstrate missing-value handling, duplicate removal, normalization, and at least one strategy for outlier treatment. Include a short justification for each transformation.',
+        sampleCode: `# ========================================================
+# Assignment 2: Data Preprocessing Pipeline
+# ========================================================
+import pandas as pd
+import numpy as np
+
+# Raw student marks dataset
+raw_data = pd.DataFrame({
+    'Name': ['Asha', 'Ravi', 'Meena', 'Asha', 'Kiran'],
+    'Math': [88, np.nan, 76, 88, 91],
+    'Science': [90, 74, 85, 90, 96],
+    'English': [80, 79, np.nan, 80, 88],
+    'Age': [19, 22, 21, 19, 25]
+})
+
+# 1. Remove duplicate rows
+clean_data = raw_data.drop_duplicates()
+
+# 2. Fill missing values with column means
+for col in ['Math', 'English']:
+    clean_data[col] = clean_data[col].fillna(clean_data[col].mean())
+
+# 3. Standardize numerical features for model compatibility
+clean_data['Math_z'] = (clean_data['Math'] - clean_data['Math'].mean()) / clean_data['Math'].std(ddof=0)
+clean_data['Age_z'] = (clean_data['Age'] - clean_data['Age'].mean()) / clean_data['Age'].std(ddof=0)
+
+print('Cleaned dataset rows:', len(clean_data))
+print(clean_data[['Math', 'English', 'Math_z', 'Age_z']].round(3))
+print('Duplicate rows removed successfully.')
+`
+      },
+      {
+        id: 3,
+        title: 'Assignment 3: Exploratory Data Analysis & Visualization',
+        dueDate: 'Nov 18, 2026',
+        maxMarks: 100,
+        problem: 'Perform exploratory data analysis on a numerical dataset and create meaningful plots to summarize trends, correlations, and class distributions. Interpret the visual outputs and explain how they guide decision-making.',
+        constraints: 'Include at least one histogram, one scatter or line plot, and one summary insight from the chart output. Also mention any outlier or skewness observations.',
+        sampleCode: `# ========================================================
+# Assignment 3: EDA and Visualization
+# ========================================================
+import numpy as np
+
+# Example data for sales trend and relationship analysis
+months = np.array(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])
+sales = np.array([120, 135, 128, 170, 165, 185])
+marketing_budget = np.array([20, 22, 25, 31, 30, 40])
+
+# Descriptive statistics
+average_sales = sales.mean()
+std_sales = sales.std()
+
+print('Average sales:', round(average_sales, 2))
+print('Sales variability:', round(std_sales, 2))
+print('Monthly sales trend:', sales)
+
+# Basic relationship check
+correlation = np.corrcoef(sales, marketing_budget)[0, 1]
+print('Correlation between sales and marketing spend:', round(correlation, 3))
+
+if correlation > 0.5:
+    print('Positive relationship: higher spending is linked to higher sales.')
+else:
+    print('Weak relationship: explore additional factors impacting sales.')
+`
+      }
+    ];
+
+    // Default Profile Details
+    const defaultProfile = {
+      name: 'Evuri Harika',
+      rollNo: '24102A030154',
+      dept: 'B.Tech - Computer Science and Engineering (Data Science)',
+      email: 'evuriharika05@gmail.com',
+      cgpa: '8.92',
+      bio: 'Aspiring data science professional focused on analytics, machine learning, and real-world problem solving through data-driven insights.',
+      github: 'github.com/harika',
+      linkedin: 'linkedin.com/in/evuri-harika',
+      skills: ['Python', 'Data Science', 'Machine Learning', 'SQL', 'Visualization', 'AI/ML'],
+      avatar: './evuri_profile_photo.png',
+      institution: 'Mohan Babu University (MBU)',
+      status: 'Active',
+      admissionNo: 'MBUSOC/CSECS35/2024',
+      admissionYear: '2024-2025',
+      school: 'School of Computing',
+      department: 'Data Science',
+      semester: 'V-Semester',
+      courseName: 'B.Tech. - Computer Science and Engineering (Data Science)',
+      college: 'Mohan Babu University',
+      curriculumPlan: 'Regular',
+      currentSemester: '5',
+      facultyName: 'Bosubabu',
+      degree: 'B.Tech',
+      branch: 'Computer Science and Engineering',
+      specialization: 'Data Science',
+      idCardImage: './evuri_id_card.png'
+    };
+
+    // Default Submissions
+    const defaultSubmissions = [
+      {
+        id: 1,
+        assignmentId: 1,
+        title: 'Assignment 1: Titanic Survival Prediction',
+        timestamp: '2026-10-24 16:45',
+        status: 'Evaluated',
+        accuracy: '90.0%',
+        grade: '95 / 100',
+        codeSnippet: `# Submitted on Oct 24 by V. Sai Krishna\n# Validated with 90% accuracy`
+      }
+    ];
+
+    /* ----------------------------------------------------
+       STORE MANAGEMENT HELPER FUNCTIONS
+    ---------------------------------------------------- */
+    function normalizePdfUrl(url, fallbackUrl = '') {
+      if (!url && fallbackUrl) return fallbackUrl;
+      const raw = String(url || '').trim();
+      if (!raw) return fallbackUrl;
+      if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
+      if (!raw.includes('://')) {
+        return encodeURI(raw);
+      }
+      return raw;
+    }
+
+    function isLocalPdfReference(url) {
+      const normalized = normalizePdfUrl(url, '');
+      if (!normalized) return false;
+      return normalized.startsWith('file://') || /^[A-Za-z]:\\/.test(normalized) ||
+        (normalized.startsWith('/') && !normalized.includes('://')) ||
+        (!normalized.includes('://') && !normalized.startsWith('//') && !normalized.startsWith('data:') && !normalized.startsWith('blob:'));
+    }
+
+    function repairPdfUrlForModule(module) {
+      const defaultModule = defaultModules.find(item => item.code === module?.code);
+      if (defaultModule) return defaultModule.pdfUrl;
+      const raw = module && module.pdfUrl ? String(module.pdfUrl).trim() : '';
+      return normalizePdfUrl(raw);
+    }
+
+    function loadData(key, fallback) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_PREFIX + key);
+        if (!stored) return fallback;
+        const parsed = JSON.parse(stored);
+        if (key === 'MODULES' && Array.isArray(parsed)) {
+          return parsed.map(module => ({
+            ...module,
+            pdfUrl: repairPdfUrlForModule(module)
+          }));
+        }
+        return parsed;
+      } catch (e) {
+        console.error("Storage read error", e);
+        return fallback;
+      }
+    }
+
+    function saveData(key, val) {
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(val));
+      } catch (e) {
+        console.error("Storage write error", e);
+      }
+    }
+
+    // App State Singletons
+    let appModules = loadData('MODULES', defaultModules).map(module => ({
+      ...module,
+      pdfUrl: repairPdfUrlForModule(module)
+    }));
+    let appTools = loadData('TOOLS', defaultTools);
+    let appResources = loadData('RESOURCES', defaultResources);
+    let appLabs = loadData('LABS', defaultLabs);
+    let appAssignments = loadData('ASSIGNMENTS', defaultAssignments);
+    let appProfile = loadData('PROFILE', defaultProfile);
+    if (!appProfile || !appProfile.avatar || appProfile.avatar !== './evuri_profile_photo.png') {
+      appProfile = { ...defaultProfile, ...appProfile, avatar: './evuri_profile_photo.png' };
+      saveData('PROFILE', appProfile);
+    }
+    if (!appProfile || !appProfile.idCardImage || appProfile.idCardImage !== './evuri_id_card.png') {
+      appProfile = { ...defaultProfile, ...appProfile, idCardImage: './evuri_id_card.png' };
+      saveData('PROFILE', appProfile);
+    }
+    let appSubmissions = loadData('SUBMISSIONS', defaultSubmissions);
+
+    let activeToolCategory = 'all';
+    let activeResourceType = 'all';
+    let activeAssignmentId = 1;
+    let chartInstance = null;
+
+    /* ----------------------------------------------------
+       THEME & NAVIGATION
+    ---------------------------------------------------- */
+    function initTheme() {
+      const isDark = localStorage.getItem('MBU_DARK_THEME') === 'true' ||
+        (!('MBU_DARK_THEME' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        updateThemeIcon(true);
+      } else {
+        document.documentElement.classList.remove('dark');
+        updateThemeIcon(false);
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('MBU_DARK_THEME', isDark);
+      updateThemeIcon(isDark);
+      if (chartInstance) renderChartVisualization(); // Re-render chart for dark/light grid
+    }
+
+    function updateThemeIcon(isDark) {
+      const icon = document.getElementById('themeIcon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
+      }
+    }
+
+    function toggleMobileMenu() {
+      const m = document.getElementById('mobileMenu');
+      m.classList.toggle('hidden');
+    }
+
+    function switchTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      // Show requested tab
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.remove('hidden');
+
+      // Update Header nav link highlights
+      document.querySelectorAll('[data-tab-nav]').forEach(btn => {
+        const id = btn.getAttribute('data-tab-nav');
+        if (id === tabId) {
+          btn.className = 'tab-btn px-3 py-2 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 flex items-center gap-1.5 transition font-semibold';
+        } else {
+          btn.className = 'tab-btn px-3 py-2 rounded-lg text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center gap-1.5 transition';
+        }
+      });
+
+      // Special re-renders
+      if (tabId === 'assignments') {
+        setTimeout(() => {
+          renderChartVisualization();
+        }, 100);
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    /* ----------------------------------------------------
+       TOAST ALERTS (No native alert() permitted)
+    ---------------------------------------------------- */
+    function showToast(title, message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-xl border text-xs flex items-start gap-3 pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0 max-w-sm ${
+        type === 'success' 
+          ? 'bg-slate-900 text-white border-emerald-500/50' 
+          : type === 'info'
+          ? 'bg-blue-900 text-white border-blue-500/50'
+          : 'bg-red-900 text-white border-red-500/50'
+      }`;
+      
+      const iconName = type === 'success' ? 'check-circle-2' : type === 'info' ? 'info' : 'alert-triangle';
+      
+      toast.innerHTML = `
+        <div class="mt-0.5 text-amber-400"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+        <div class="flex-1">
+          <div class="font-bold">${title}</div>
+          <div class="text-slate-300 text-[11px] mt-0.5">${message}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Trigger animation
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    /* ----------------------------------------------------
+       RENDERERS
+    ---------------------------------------------------- */
+
+    // 1. Render Modules
+    function renderModules(filterText = '') {
+      const container = document.getElementById('modulesContainer');
+      const filtered = appModules.filter(m => 
+        m.title.toLowerCase().includes(filterText.toLowerCase()) ||
+        m.category.toLowerCase().includes(filterText.toLowerCase()) ||
+        m.code.toLowerCase().includes(filterText.toLowerCase()) ||
+        m.description.toLowerCase().includes(filterText.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 space-y-2">
+            <i data-lucide="inbox" class="w-10 h-10 mx-auto text-slate-300"></i>
+            <p>No modules match your search filter.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(m => `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 uppercase">${m.code}</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                m.difficulty === 'Foundational' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600' :
+                m.difficulty === 'Intermediate' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600' :
+                'bg-purple-50 dark:bg-purple-950/40 text-purple-600'
+              }">${m.difficulty}</span>
+            </div>
+
+            <h3 class="font-bold text-base text-slate-900 dark:text-white">${m.title}</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">${m.description}</p>
+
+            <!-- Subtopics pills -->
+            <div class="space-y-1.5 pt-2">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Core Subtopics:</div>
+              <div class="flex flex-wrap gap-1">
+                ${m.subtopics.map(sub => `
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${sub}</span>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <div>
+              <div class="flex justify-between text-[11px] mb-1">
+                <span class="text-slate-500">Duration: ${m.duration}</span>
+                <span class="font-semibold text-blue-600 dark:text-blue-400">${m.progress || 0}% Done</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-blue-600 h-full rounded-full" style="width: ${m.progress || 0}%"></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <a href="${m.pdfUrl || '#'}" target="_blank" rel="noopener noreferrer" data-pdf-title="${m.title}" data-pdf-url="${m.pdfUrl || ''}" class="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 font-medium">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Syllabus PDF
+              </a>
+              <button onclick="openModuleDetail(${m.id})" class="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-300 font-semibold text-xs transition">
+                Explore Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('stat-modules-count').innerText = appModules.length;
+      lucide.createIcons();
+    }
+
+    function filterModules() {
+      const q = document.getElementById('moduleSearchInput').value;
+      renderModules(q);
+    }
+
+    // 2. Render Tools
+    function renderTools(filterText = '') {
+      const container = document.getElementById('toolsContainer');
+      const filtered = appTools.filter(t => {
+        const matchesCat = activeToolCategory === 'all' || t.domain === activeToolCategory;
+        const matchesQuery = t.name.toLowerCase().includes(filterText.toLowerCase()) ||
+          t.role.toLowerCase().includes(filterText.toLowerCase()) ||
+          t.desc.toLowerCase().includes(filterText.toLowerCase());
+        return matchesCat && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 space-y-2">
+            <i data-lucide="wrench" class="w-10 h-10 mx-auto text-slate-300"></i>
+            <p>No tools found for this category or search.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between hover:border-blue-500/40 transition">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-blue-600 dark:text-blue-400">${t.domain}</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${t.badge}</span>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                ${t.name}
+              </h3>
+              <div class="text-xs font-medium text-slate-500">${t.role}</div>
+            </div>
+
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${t.desc}</p>
+          </div>
+
+          <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <a href="${t.url}" target="_blank" class="text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-400 flex items-center gap-1">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Docs
+            </a>
+            <button onclick="openToolSnippet('${t.name}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 transition flex items-center gap-1.5">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i> Syntax Snippet
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('stat-tools-count').innerText = appTools.length;
+      lucide.createIcons();
+    }
+
+    function setToolCategory(cat) {
+      activeToolCategory = cat;
+      document.querySelectorAll('.tool-cat-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === cat) {
+          btn.className = 'tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm transition';
+        } else {
+          btn.className = 'tool-cat-btn px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition';
+        }
+      });
+      filterTools();
+    }
+
+    function filterTools() {
+      const q = document.getElementById('toolsSearchInput').value;
+      renderTools(q);
+    }
+
+    // 3. Render Resources
+    function renderResources(filterText = '') {
+      const container = document.getElementById('resourcesContainer');
+      const filtered = appResources.filter(r => {
+        const matchesType = activeResourceType === 'all' || r.type === activeResourceType;
+        const matchesQuery = r.title.toLowerCase().includes(filterText.toLowerCase()) ||
+          r.author.toLowerCase().includes(filterText.toLowerCase()) ||
+          r.tags.some(t => t.toLowerCase().includes(filterText.toLowerCase())) ||
+          r.desc.toLowerCase().includes(filterText.toLowerCase());
+        return matchesType && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 space-y-2">
+            <i data-lucide="library" class="w-10 h-10 mx-auto text-slate-300"></i>
+            <p>No resources found.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                r.type === 'Dataset' ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' :
+                r.type === 'Textbook' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' :
+                r.type === 'CheatSheet' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' :
+                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+              }">${r.type}</span>
+              <span class="text-xs text-slate-400 font-medium">${r.category}</span>
+            </div>
+
+            <h3 class="font-bold text-base text-slate-900 dark:text-white">${r.title}</h3>
+            <div class="text-xs text-slate-500 font-medium">By: ${r.author}</div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${r.desc}</p>
+
+            <div class="flex flex-wrap gap-1 pt-1">
+              ${r.tags.map(t => `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">#${t}</span>`).join('')}
+            </div>
+          </div>
+
+          <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <button onclick="downloadResourceAttachment('${r.title}')" class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 font-medium flex items-center gap-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Quick Save
+            </button>
+            <a href="${r.url}" target="_blank" data-pdf-title="${r.title}" data-pdf-url="${r.pdfUrl || r.url}" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open Source
+            </a>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function setResourceType(type) {
+      activeResourceType = type;
+      document.querySelectorAll('.res-type-btn').forEach(btn => {
+        if (btn.getAttribute('data-type') === type) {
+          btn.className = 'res-type-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition';
+        } else {
+          btn.className = 'res-type-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition';
+        }
+      });
+      filterResources();
+    }
+
+    function filterResources() {
+      const q = document.getElementById('resourceSearchInput').value;
+      renderResources(q);
+    }
+
+    // 4. Render Labs
+    function renderLabs() {
+      const container = document.getElementById('labsContainer');
+      container.innerHTML = appLabs.map((lab, idx) => `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">${idx + 1}</span>
+              <div>
+                <h3 class="font-bold text-base text-slate-900 dark:text-white">${lab.title}</h3>
+                <span class="text-xs font-mono text-slate-400">${lab.code} • ${lab.dataset}</span>
+              </div>
+            </div>
+            <button onclick="openLabInEditor(${lab.id})" class="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Open in Code Lab
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-2">
+              <div>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Aim:</span>
+                <p class="text-slate-600 dark:text-slate-400 mt-0.5">${lab.aim}</p>
+              </div>
+              <div>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Theoretical Foundation:</span>
+                <p class="text-slate-600 dark:text-slate-400 mt-0.5">${lab.theory}</p>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <span class="font-bold text-slate-700 dark:text-slate-300">Step-by-Step Procedure:</span>
+              <ol class="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-400">
+                ${lab.procedure.map(step => `<li>${step}</li>`).join('')}
+              </ol>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl font-mono text-xs text-emerald-400 overflow-x-auto">
+            <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Interactive Sandbox Preview Snippet</div>
+            <pre>${lab.sampleSnippet}</pre>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('stat-labs-count').innerText = appLabs.length;
+      lucide.createIcons();
+    }
+
+    // 5. Render Assignment Selection & Details
+    function renderAssignmentSelector() {
+      const select = document.getElementById('assignmentSelector');
+      select.innerHTML = appAssignments.map(a => `
+        <option value="${a.id}" ${a.id === activeAssignmentId ? 'selected' : ''}>${a.title}</option>
+      `).join('');
+      loadAssignmentIntoRunner(activeAssignmentId);
+    }
+
+    function onSelectAssignmentChange() {
+      const val = parseInt(document.getElementById('assignmentSelector').value);
+      activeAssignmentId = val;
+      loadAssignmentIntoRunner(val);
+    }
+
+    function loadAssignmentIntoRunner(id) {
+      activeAssignmentId = id;
+      const assign = appAssignments.find(a => a.id === id) || appAssignments[0];
+      
+      const briefCard = document.getElementById('assignmentBriefCard');
+      briefCard.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <span class="text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400">Active Course Assignment</span>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">${assign.title}</h3>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-950/40 text-red-600 font-semibold flex items-center gap-1">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i> Due: ${assign.dueDate}
+            </span>
+            <span class="px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 font-semibold">Max: ${assign.maxMarks} Marks</span>
+          </div>
+        </div>
+        <div class="text-xs space-y-1.5">
+          <p class="text-slate-700 dark:text-slate-300"><span class="font-bold">Problem Statement:</span> ${assign.problem}</p>
+          <p class="text-slate-500"><span class="font-bold">Evaluation Constraints:</span> ${assign.constraints}</p>
+        </div>
+      `;
+
+      // Set editor content
+      document.getElementById('codeEditorArea').value = assign.sampleCode;
+      clearConsole();
+      lucide.createIcons();
+    }
+
+    function resetEditorCode() {
+      const assign = appAssignments.find(a => a.id === activeAssignmentId);
+      if (assign) {
+        document.getElementById('codeEditorArea').value = assign.sampleCode;
+        showToast('Editor Reset', 'Code reset to clean default template.', 'info');
+      }
+    }
+
+    // 6. Submissions History Renderer
+    function renderSubmissionsHistory() {
+      const tbody = document.getElementById('submissionHistoryBody');
+      if (appSubmissions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-6 text-slate-400">No solutions submitted yet. Click "Submit & Save to Profile" above to record work.</td>
+          </tr>
+        `;
+        document.getElementById('stat-submissions-count').innerText = 0;
+        return;
+      }
+
+      tbody.innerHTML = appSubmissions.map(sub => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+          <td class="py-3 px-3 font-medium text-slate-900 dark:text-slate-100">${sub.title}</td>
+          <td class="py-3 px-3 text-slate-500">${sub.timestamp}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">${sub.status}</span>
+          </td>
+          <td class="py-3 px-3 font-semibold text-blue-600 dark:text-blue-400">${sub.accuracy}</td>
+          <td class="py-3 px-3 font-bold">${sub.grade}</td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="loadHistoricSubmission(${sub.id})" class="text-blue-600 hover:underline font-medium">Reload Code</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('stat-submissions-count').innerText = appSubmissions.length;
+    }
+
+    function loadHistoricSubmission(subId) {
+      const sub = appSubmissions.find(s => s.id === subId);
+      if (sub && sub.codeSnippet) {
+        document.getElementById('codeEditorArea').value = sub.codeSnippet;
+        showToast('Loaded', `Reloaded solution for "${sub.title}" into workspace.`, 'info');
+      }
+    }
+
+    // 7. Render Student Profile
+    function renderProfile() {
+      const navStudentName = document.getElementById('navStudentName');
+      if (navStudentName) navStudentName.innerText = appProfile.name;
+
+      const profileNameDisplay = document.getElementById('profileNameDisplay');
+      if (profileNameDisplay) profileNameDisplay.innerText = appProfile.name;
+
+      const profileRollDisplay = document.getElementById('profileRollDisplay');
+      if (profileRollDisplay) profileRollDisplay.innerText = appProfile.rollNo;
+
+      const profileDeptDisplay = document.getElementById('profileDeptDisplay');
+      if (profileDeptDisplay) profileDeptDisplay.innerText = appProfile.dept;
+
+      const profileBioDisplay = document.getElementById('profileBioDisplay');
+      if (profileBioDisplay) profileBioDisplay.innerText = appProfile.bio;
+
+      const profileEmailDisplay = document.getElementById('profileEmailDisplay');
+      if (profileEmailDisplay) profileEmailDisplay.innerText = appProfile.email;
+
+      const profileStatusBadge = document.getElementById('profileStatusBadge');
+      if (profileStatusBadge) profileStatusBadge.innerText = appProfile.status || 'Active';
+
+      const profileInstitutionValue = document.getElementById('profileInstitutionValue');
+      if (profileInstitutionValue) profileInstitutionValue.innerText = appProfile.institution || appProfile.college || 'Mohan Babu University (MBU)';
+
+      const profileSemesterValue = document.getElementById('profileSemesterValue');
+      if (profileSemesterValue) profileSemesterValue.innerText = appProfile.currentSemester || appProfile.semester || '5';
+
+      const profileFacultyValue = document.getElementById('profileFacultyValue');
+      if (profileFacultyValue) profileFacultyValue.innerText = appProfile.facultyName || 'Bosubabu';
+
+      const profileDegreeValue = document.getElementById('profileDegreeValue');
+      if (profileDegreeValue) profileDegreeValue.innerText = appProfile.degree || 'B.Tech';
+
+      const profileBranchValue = document.getElementById('profileBranchValue');
+      if (profileBranchValue) profileBranchValue.innerText = appProfile.branch || 'Computer Science and Engineering';
+
+      const profileSpecializationValue = document.getElementById('profileSpecializationValue');
+      if (profileSpecializationValue) profileSpecializationValue.innerText = appProfile.specialization || 'Data Science';
+
+      const profileMainPhoto = document.getElementById('profileMainPhoto');
+      const profileAvatarImg = document.getElementById('profileAvatarImg');
+      const navAvatarImg = document.getElementById('navAvatarImg');
+      const idCardImage = document.getElementById('profileIdCardImage');
+
+      if (profileAvatarImg) profileAvatarImg.src = appProfile.avatar || './evuri_profile_photo.png';
+      if (profileMainPhoto) profileMainPhoto.src = appProfile.avatar || './evuri_profile_photo.png';
+      if (navAvatarImg) navAvatarImg.src = appProfile.avatar || './evuri_profile_photo.png';
+      if (idCardImage) idCardImage.src = appProfile.idCardImage || './evuri_id_card.png';
+
+      const profileGithubLink = document.getElementById('profileGithubLink');
+      if (profileGithubLink) {
+        profileGithubLink.innerText = appProfile.github;
+        profileGithubLink.href = 'https://' + appProfile.github.replace('https://', '');
+      }
+
+      const profileLinkedinLink = document.getElementById('profileLinkedinLink');
+      if (profileLinkedinLink) {
+        profileLinkedinLink.innerText = appProfile.linkedin;
+        profileLinkedinLink.href = 'https://' + appProfile.linkedin.replace('https://', '');
+      }
+
+      const skillsContainer = document.getElementById('profileSkillsContainer');
+      if (skillsContainer && Array.isArray(appProfile.skills)) {
+        skillsContainer.innerHTML = appProfile.skills.map(s => `
+          <span class="rounded-md bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-200">${s}</span>
+        `).join('');
+      }
+
+      const editProfName = document.getElementById('editProfName');
+      if (editProfName) editProfName.value = appProfile.name;
+      const editProfRoll = document.getElementById('editProfRoll');
+      if (editProfRoll) editProfRoll.value = appProfile.rollNo;
+      const editProfCGPA = document.getElementById('editProfCGPA');
+      if (editProfCGPA) editProfCGPA.value = appProfile.cgpa;
+      const editProfEmail = document.getElementById('editProfEmail');
+      if (editProfEmail) editProfEmail.value = appProfile.email;
+      const editProfBio = document.getElementById('editProfBio');
+      if (editProfBio) editProfBio.value = appProfile.bio;
+      const editProfGithub = document.getElementById('editProfGithub');
+      if (editProfGithub) editProfGithub.value = appProfile.github;
+      const editProfLinkedin = document.getElementById('editProfLinkedin');
+      if (editProfLinkedin) editProfLinkedin.value = appProfile.linkedin;
+      const editProfSkills = document.getElementById('editProfSkills');
+      if (editProfSkills) editProfSkills.value = appProfile.skills.join(', ');
+    }
+    /* ----------------------------------------------------
+       INTERACTIVE CODE RUNNER SIMULATION
+    ---------------------------------------------------- */
+    function clearConsole() {
+      const c = document.getElementById('outputConsole');
+      c.innerHTML = '<div class="text-slate-500 italic">// Console ready. Click "Run Code" to execute.</div>';
+    }
+
+    function appendToConsole(text, isError = false) {
+      const c = document.getElementById('outputConsole');
+      const row = document.createElement('div');
+      row.className = isError ? 'text-red-400 font-mono' : 'text-emerald-400 font-mono';
+      row.innerText = text;
+      c.appendChild(row);
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function runCode() {
+      const code = document.getElementById('codeEditorArea').value;
+      const c = document.getElementById('outputConsole');
+      c.innerHTML = '<div class="text-slate-400 font-mono">[Emulating Python 3.11 Runtime in Browser...]</div>';
+
+      setTimeout(() => {
+        try {
+          // Parse lines and evaluate simulate output
+          const lines = code.split('\n');
+          let capturedOutput = [];
+          let hasPrint = false;
+          let calculatedAccuracy = null;
+          let calculatedF1 = null;
+
+          for (let line of lines) {
+            let trimmed = line.trim();
+            if (trimmed.startsWith('print(')) {
+              hasPrint = true;
+              let content = trimmed.slice(6, -1);
+              // Clean quotes if pure string
+              if ((content.startsWith('"') && content.endsWith('"')) || (content.startsWith("'") && content.endsWith("'"))) {
+                capturedOutput.push(content.slice(1, -1));
+              } else if (content.includes('Accuracy')) {
+                capturedOutput.push('Accuracy      : 90.0%');
+                calculatedAccuracy = '90.0%';
+              } else if (content.includes('F1-Score')) {
+                capturedOutput.push('F1-Score      : 0.923');
+                calculatedF1 = '0.923';
+              } else {
+                capturedOutput.push(content.replace(/f"|"/g, ''));
+              }
+            }
+          }
+
+          if (capturedOutput.length === 0) {
+            capturedOutput.push(">> Process completed with exit code 0.");
+            capturedOutput.push("Predicted Labels: [1, 0, 1, 1, 0, 0, 1, 0, 1, 0]");
+            capturedOutput.push("Calculated Loss  : 0.1843");
+          }
+
+          capturedOutput.forEach(out => appendToConsole(out));
+          appendToConsole("✓ Test cases: 10/10 Passed (Speed: 42ms)");
+
+          // Update Preview Badges & Chart
+          const badge = document.getElementById('testCaseBadge');
+          badge.innerText = 'All Test Cases Passed (100%)';
+          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+
+          document.getElementById('metricAccuracy').innerText = calculatedAccuracy || '90.0%';
+          document.getElementById('metricF1').innerText = calculatedF1 || '0.92';
+          document.getElementById('metricLoss').innerText = '0.18';
+
+          renderChartVisualization();
+          showToast('Code Executed', 'Model evaluation completed without faults.', 'success');
+        } catch (err) {
+          appendToConsole('RuntimeError: ' + err.message, true);
+        }
+      }, 350);
+    }
+
+    function renderChartVisualization() {
+      const canvas = document.getElementById('resultChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const isDark = document.documentElement.classList.contains('dark');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5', 'Epoch 6'],
+          datasets: [
+            {
+              label: 'Training Accuracy',
+              data: [0.65, 0.72, 0.81, 0.86, 0.89, 0.93],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Validation Loss',
+              data: [0.70, 0.55, 0.42, 0.32, 0.24, 0.18],
+              borderColor: '#ef4444',
+              backgroundColor: 'transparent',
+              borderDash: [5, 5],
+              tension: 0.35
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: isDark ? '#94a3b8' : '#475569',
+                font: { size: 10 }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 9 } }
+            },
+            y: {
+              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 9 } }
+            }
+          }
+        }
+      });
+    }
+
+    function submitAssignment() {
+      const code = document.getElementById('codeEditorArea').value;
+      const assign = appAssignments.find(a => a.id === activeAssignmentId) || appAssignments[0];
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
+
+      const newSub = {
+        id: Date.now(),
+        assignmentId: assign.id,
+        title: assign.title,
+        timestamp: timestamp,
+        status: 'Evaluated',
+        accuracy: document.getElementById('metricAccuracy').innerText !== '--' ? document.getElementById('metricAccuracy').innerText : '91.5%',
+        grade: '96 / 100',
+        codeSnippet: code
+      };
+
+      appSubmissions.unshift(newSub);
+      saveData('SUBMISSIONS', appSubmissions);
+      renderSubmissionsHistory();
+
+      showToast('Assignment Submitted!', `"${assign.title}" was submitted and saved to your profile record with Grade 96/100.`, 'success');
+    }
+
+    /* ----------------------------------------------------
+       LAB SHORTCUTS & SNIPPET MODALS
+    ---------------------------------------------------- */
+    function openLabInEditor(labId) {
+      const lab = appLabs.find(l => l.id === labId);
+      if (lab) {
+        switchTab('assignments');
+        document.getElementById('codeEditorArea').value = `"""\nMohan Babu University - Data Science Laboratory\n${lab.code}: ${lab.title}\nAim: ${lab.aim}\n"""\n\n` + lab.sampleSnippet;
+        showToast('Lab Code Loaded', `Loaded ${lab.code} into interactive playground.`, 'info');
+      }
+    }
+
+    let activeSnippetForModal = '';
+    function openToolSnippet(toolName) {
+      const tool = appTools.find(t => t.name === toolName);
+      if (!tool) return;
+      document.getElementById('snippetModalTitle').innerText = `${tool.name} Syntax Preview`;
+      document.getElementById('snippetModalCat').innerText = `${tool.domain} • ${tool.role}`;
+      document.getElementById('snippetModalCode').innerText = tool.snippet;
+      document.getElementById('snippetDocLink').href = tool.url;
+      activeSnippetForModal = tool.snippet;
+      openModal('toolSnippetModal');
+    }
+
+    function copySnippetCode() {
+      const text = document.getElementById('snippetModalCode').innerText;
+      // standard fallback execCommand for restricted iframes
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast('Copied', 'Snippet code copied to clipboard!', 'success');
+    }
+
+    function loadSnippetIntoCodeLab() {
+      closeModal('toolSnippetModal');
+      switchTab('assignments');
+      document.getElementById('codeEditorArea').value = activeSnippetForModal;
+      showToast('Transferred', 'Snippet loaded into Code Lab editor.', 'info');
+    }
+
+    function openModuleDetail(modId) {
+      const mod = appModules.find(m => m.id === modId);
+      if (mod) {
+        showToast('Curriculum Access', `Opened syllabus notes for "${mod.title}".`, 'info');
+      }
+    }
+
+    function renderPdfFallback(title, message, url = '') {
+      const bookEl = document.getElementById('pdfReaderBook');
+      const loadingEl = document.getElementById('pdfReaderLoading');
+      const prevBtn = document.getElementById('pdfPrevBtn');
+      const nextBtn = document.getElementById('pdfNextBtn');
+      const pageInfo = document.getElementById('pdfPageInfo');
+      const originalLink = document.getElementById('pdfOriginalLink');
+
+      if (bookEl) {
+        bookEl.innerHTML = `
+          <div class="flex h-full w-full items-center justify-center rounded-[24px] border border-dashed border-cyan-400/60 bg-gradient-to-br from-slate-900/25 via-sky-950/35 to-emerald-950/30 p-8">
+            <div class="max-w-xl text-center text-white">
+              <div class="text-[11px] uppercase tracking-[0.35em] text-cyan-200/80">Preview unavailable</div>
+              <h3 class="mt-4 text-3xl font-black tracking-tight text-white">${title}</h3>
+              <p class="mt-4 text-base leading-relaxed text-slate-200/90">${message}</p>
+              <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                ${url ? `<a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-900 hover:bg-amber-400">Open Original PDF</a>` : ''}
+                <button type="button" onclick="closePdfReader()" class="rounded-xl border border-slate-500 bg-slate-800/70 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-700">Close Reader</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (loadingEl) {
+        loadingEl.classList.add('hidden');
+        loadingEl.classList.remove('flex');
+      }
+      if (pageInfo) pageInfo.innerText = 'Pages 0 of 0';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+      if (originalLink) originalLink.href = url || '#';
+    }
+
+    async function openPdfReader(title, url) {
+      const safeUrl = normalizePdfUrl(url, '');
+      if (!safeUrl) {
+        const overlay = document.getElementById('pdfReaderOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        renderPdfFallback(title, 'This document is not linked yet, so the viewer is showing a useful preview instead of an empty page.', '');
+        return;
+      }
+
+      if (window.location.protocol === 'file:' && isLocalPdfReference(safeUrl)) {
+        window.open(safeUrl, '_blank');
+        return;
+      }
+
+      const overlay = document.getElementById('pdfReaderOverlay');
+      const titleEl = document.getElementById('pdfReaderTitle');
+      const loadingEl = document.getElementById('pdfReaderLoading');
+      const bookEl = document.getElementById('pdfReaderBook');
+      const pageInfo = document.getElementById('pdfPageInfo');
+      const originalLink = document.getElementById('pdfOriginalLink');
+      const prevBtn = document.getElementById('pdfPrevBtn');
+      const nextBtn = document.getElementById('pdfNextBtn');
+      const closeBtn = document.getElementById('pdfCloseBtn');
+      const closeReaderBtn = document.getElementById('pdfReaderCloseBtn');
+
+      if (!overlay || !titleEl || !loadingEl || !bookEl || !pageInfo || !originalLink || !prevBtn || !nextBtn || !closeBtn || !closeReaderBtn) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      titleEl.innerText = title;
+      originalLink.href = safeUrl;
+      originalLink.setAttribute('aria-label', `Open original PDF for ${title}`);
+      pageInfo.innerText = 'Pages 0 of 0';
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      loadingEl.classList.remove('hidden');
+      loadingEl.classList.add('flex');
+      bookEl.innerHTML = '';
+      overlay.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+
+      const state = { pdf: null, currentPage: 1, totalPages: 0, url, title };
+      window.__mbuPdfReaderState = state;
+
+      const renderPage = async (pageNum) => {
+        const page = await state.pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: window.innerWidth < 768 ? 1.1 : 1.3 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pdf-reader-page';
+        wrapper.setAttribute('data-page-number', String(pageNum));
+        wrapper.appendChild(canvas);
+        return wrapper;
+      };
+
+      const renderSpread = async () => {
+        if (!state.pdf) return;
+        const totalPages = state.totalPages;
+        const spread = [];
+        const startPage = state.currentPage;
+        const pageNumbers = [startPage];
+        if (startPage < totalPages && window.innerWidth >= 768) {
+          pageNumbers.push(startPage + 1);
+        }
+
+        for (const pageNumber of pageNumbers) {
+          if (pageNumber <= totalPages) {
+            spread.push(await renderPage(pageNumber));
+          }
+        }
+
+        bookEl.innerHTML = '';
+        if (spread.length > 1) {
+          const spine = document.createElement('div');
+          spine.className = 'pdf-reader-spine';
+          bookEl.appendChild(spine);
+        }
+
+        spread.forEach((pageNode) => bookEl.appendChild(pageNode));
+
+        const firstPage = Math.min(state.currentPage, totalPages);
+        const lastPage = Math.min(state.currentPage + (window.innerWidth >= 768 ? 1 : 0), totalPages);
+        pageInfo.innerText = `Pages ${firstPage}-${lastPage} of ${totalPages}`;
+        prevBtn.disabled = state.currentPage <= 1;
+        nextBtn.disabled = state.currentPage >= totalPages;
+        loadingEl.classList.add('hidden');
+        loadingEl.classList.remove('flex');
+      };
+
+      const goToPage = (pageNum) => {
+        const safePage = Math.min(Math.max(1, pageNum), state.totalPages || 1);
+        state.currentPage = safePage;
+        renderSpread();
+      };
+
+      prevBtn.onclick = () => goToPage(state.currentPage - (window.innerWidth >= 768 ? 2 : 1));
+      nextBtn.onclick = () => goToPage(state.currentPage + (window.innerWidth >= 768 ? 2 : 1));
+      closeBtn.onclick = closePdfReader;
+      closeReaderBtn.onclick = closePdfReader;
+
+      try {
+        if (!window.pdfjsLib) {
+          throw new Error('PDF viewer library failed to load.');
+        }
+        const pdfjs = window.pdfjsLib;
+        pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.js';
+        const loadingTask = pdfjs.getDocument({ url: safeUrl, disableFontFace: false, useSystemFonts: true });
+        state.pdf = await loadingTask.promise;
+        state.totalPages = state.pdf.numPages;
+        if (state.totalPages <= 0) {
+          throw new Error('This PDF file is empty or could not be read.');
+        }
+        goToPage(1);
+      } catch (error) {
+        console.error('PDF load failed:', error);
+        renderPdfFallback(
+          title,
+          `${error.message || 'The PDF reader library failed to load this document. You can still open the original file in a new tab.'}`,
+          safeUrl
+        );
+      }
+    }
+
+    function closePdfReader() {
+      const overlay = document.getElementById('pdfReaderOverlay');
+      const bookEl = document.getElementById('pdfReaderBook');
+      if (overlay) overlay.classList.add('hidden');
+      if (bookEl) bookEl.innerHTML = '';
+      document.body.classList.remove('overflow-hidden');
+      const pdfState = window.__mbuPdfReaderState;
+      if (pdfState && pdfState.pdf && typeof pdfState.pdf.destroy === 'function') {
+        pdfState.pdf.destroy();
+      }
+      delete window.__mbuPdfReaderState;
+    }
+
+    function downloadModuleSyllabus(title) {
+      const module = appModules.find(m => m.title === title);
+      if (module && module.pdfUrl) {
+        openPdfReader(title, module.pdfUrl);
+        return;
+      }
+      showToast('Downloading Notes', `Prepared syllabus bundle for "${title}".`, 'info');
+    }
+
+    function downloadResourceAttachment(title) {
+      const resource = appResources.find(r => r.title === title && r.pdfUrl);
+      if (resource) {
+        openPdfReader(title, resource.pdfUrl);
+        return;
+      }
+      showToast('Download Queued', `Downloading digital asset: "${title}".`, 'info');
+    }
+
+    /* ----------------------------------------------------
+       MODAL CONTROLLERS & FORM HANDLERS
+    ---------------------------------------------------- */
+    document.addEventListener('click', (event) => {
+      const target = event.target.closest('a[data-pdf-url]');
+      if (target) {
+        const url = target.getAttribute('data-pdf-url');
+        if (window.location.protocol === 'file:' && isLocalPdfReference(url)) return;
+        event.preventDefault();
+        openPdfReader(target.getAttribute('data-pdf-title') || 'Document', url);
+      }
+
+      const buttonTarget = event.target.closest('[data-pdf-url]');
+      if (buttonTarget && !buttonTarget.closest('a')) {
+        event.preventDefault();
+        openPdfReader(buttonTarget.getAttribute('data-pdf-title') || 'Document', buttonTarget.getAttribute('data-pdf-url'));
+      }
+
+      const pdfLink = event.target.closest('a[href]');
+      if (pdfLink && pdfLink.href && pdfLink.href.toLowerCase().endsWith('.pdf')) {
+        event.preventDefault();
+        openPdfReader(pdfLink.getAttribute('download') || pdfLink.textContent.trim() || 'PDF Document', pdfLink.href);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (isTyping) return;
+
+      const overlay = document.getElementById('pdfReaderOverlay');
+      if (!overlay || overlay.classList.contains('hidden')) return;
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        const current = window.__mbuPdfReaderState || {};
+        const next = Math.max(1, (current.currentPage || 1) - (window.innerWidth >= 768 ? 2 : 1));
+        if (window.__mbuPdfReaderState) {
+          window.__mbuPdfReaderState.currentPage = next;
+          const renderSpread = async () => {
+            const pages = window.__mbuPdfReaderState
+            if (!pages.pdf) return;
+            const spreadStart = Math.min(Math.max(1, pages.currentPage), pages.totalPages);
+            const pageInfo = document.getElementById('pdfPageInfo');
+            const prevBtn = document.getElementById('pdfPrevBtn');
+            const nextBtn = document.getElementById('pdfNextBtn');
+            const book = document.getElementById('pdfReaderBook');
+            if (!book || !pageInfo || !prevBtn || !nextBtn) return;
+            const pageNumbers = [spreadStart];
+            if (spreadStart < pages.totalPages && window.innerWidth >= 768) pageNumbers.push(spreadStart + 1);
+            const pageCanvas = [];
+            for (const pageNumber of pageNumbers) {
+              if (pageNumber <= pages.totalPages) {
+                const page = await pages.pdf.getPage(pageNumber);
+                const viewport = page.getViewport({ scale: window.innerWidth < 768 ? 1.1 : 1.3 });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const wr = document.createElement('div');
+                wr.className = 'pdf-reader-page';
+                wr.appendChild(canvas);
+                pageCanvas.push(wr);
+              }
+            }
+            book.innerHTML = '';
+            if (pageCanvas.length > 1) {
+              const spine = document.createElement('div');
+              spine.className = 'pdf-reader-spine';
+              book.appendChild(spine);
+            }
+            pageCanvas.forEach(node => book.appendChild(node));
+            pageInfo.innerText = `Pages ${Math.min(spreadStart, pages.totalPages)}-${Math.min(spreadStart + (window.innerWidth >= 768 ? 1 : 0), pages.totalPages)} of ${pages.totalPages}`;
+            prevBtn.disabled = spreadStart <= 1;
+            nextBtn.disabled = spreadStart >= pages.totalPages;
+          };
+          renderSpread();
+        }
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        const current = window.__mbuPdfReaderState || {};
+        const next = Math.min((current.totalPages || 1), (current.currentPage || 1) + (window.innerWidth >= 768 ? 2 : 1));
+        if (window.__mbuPdfReaderState) {
+          window.__mbuPdfReaderState.currentPage = next;
+          const renderSpread = async () => {
+            const pages = window.__mbuPdfReaderState
+            if (!pages.pdf) return;
+            const spreadStart = Math.min(Math.max(1, pages.currentPage), pages.totalPages);
+            const pageInfo = document.getElementById('pdfPageInfo');
+            const prevBtn = document.getElementById('pdfPrevBtn');
+            const nextBtn = document.getElementById('pdfNextBtn');
+            const book = document.getElementById('pdfReaderBook');
+            if (!book || !pageInfo || !prevBtn || !nextBtn) return;
+            const pageNumbers = [spreadStart];
+            if (spreadStart < pages.totalPages && window.innerWidth >= 768) pageNumbers.push(spreadStart + 1);
+            const pageCanvas = [];
+            for (const pageNumber of pageNumbers) {
+              if (pageNumber <= pages.totalPages) {
+                const page = await pages.pdf.getPage(pageNumber);
+                const viewport = page.getViewport({ scale: window.innerWidth < 768 ? 1.1 : 1.3 });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const wr = document.createElement('div');
+                wr.className = 'pdf-reader-page';
+                wr.appendChild(canvas);
+                pageCanvas.push(wr);
+              }
+            }
+            book.innerHTML = '';
+            if (pageCanvas.length > 1) {
+              const spine = document.createElement('div');
+              spine.className = 'pdf-reader-spine';
+              book.appendChild(spine);
+            }
+            pageCanvas.forEach(node => book.appendChild(node));
+            pageInfo.innerText = `Pages ${Math.min(spreadStart, pages.totalPages)}-${Math.min(spreadStart + (window.innerWidth >= 768 ? 1 : 0), pages.totalPages)} of ${pages.totalPages}`;
+            prevBtn.disabled = spreadStart <= 1;
+            nextBtn.disabled = spreadStart >= pages.totalPages;
+          };
+          renderSpread();
+        }
+      } else if (event.key === 'Escape') {
+        closePdfReader();
+      }
+    });
+
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Add Module Form
+    function handleCreateModule(e) {
+      e.preventDefault();
+      const title = document.getElementById('newModTitle').value.trim();
+      const code = document.getElementById('newModCode').value.trim();
+      const diff = document.getElementById('newModDifficulty').value;
+      const duration = document.getElementById('newModDuration').value.trim();
+      const cat = document.getElementById('newModCategory').value.trim();
+      const desc = document.getElementById('newModDesc').value.trim();
+      const subtopicsRaw = document.getElementById('newModSubtopics').value.trim();
+
+      const subtopics = subtopicsRaw ? subtopicsRaw.split(',').map(s => s.trim()) : ['Foundational Concepts', 'Implementation Lab'];
+
+      const newMod = {
+        id: Date.now(),
+        code: code,
+        title: title,
+        category: cat,
+        difficulty: diff,
+        duration: duration,
+        progress: 0,
+        description: desc,
+        subtopics: subtopics
+      };
+
+      appModules.unshift(newMod);
+      saveData('MODULES', appModules);
+      renderModules();
+      closeModal('addModuleModal');
+      e.target.reset();
+      showToast('Module Added', `Successfully published "${title}" to library.`, 'success');
+    }
+
+    // Add Resource Form
+    function handleCreateResource(e) {
+      e.preventDefault();
+      const title = document.getElementById('newResTitle').value.trim();
+      const type = document.getElementById('newResType').value;
+      const author = document.getElementById('newResAuthor').value.trim() || 'MBU Faculty';
+      const url = document.getElementById('newResUrl').value.trim();
+      const desc = document.getElementById('newResDesc').value.trim();
+      const tagsRaw = document.getElementById('newResTags').value.trim();
+
+      const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()) : ['DataScience'];
+
+      const newRes = {
+        id: Date.now(),
+        title: title,
+        type: type,
+        category: 'Reference Library',
+        author: author,
+        url: url,
+        tags: tags,
+        desc: desc
+      };
+
+      appResources.unshift(newRes);
+      saveData('RESOURCES', appResources);
+      renderResources();
+      closeModal('addResourceModal');
+      e.target.reset();
+      showToast('Resource Added', `Added "${title}" to digital resources.`, 'success');
+    }
+
+    // Save Student Profile
+    function handleSaveProfile(e) {
+      e.preventDefault();
+      appProfile.name = document.getElementById('editProfName').value.trim();
+      appProfile.rollNo = document.getElementById('editProfRoll').value.trim();
+      appProfile.cgpa = document.getElementById('editProfCGPA').value.trim();
+      appProfile.email = document.getElementById('editProfEmail').value.trim();
+      appProfile.bio = document.getElementById('editProfBio').value.trim();
+      appProfile.github = document.getElementById('editProfGithub').value.trim();
+      appProfile.linkedin = document.getElementById('editProfLinkedin').value.trim();
+      
+      const skillsRaw = document.getElementById('editProfSkills').value;
+      appProfile.skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+      saveData('PROFILE', appProfile);
+      renderProfile();
+      closeModal('editProfileModal');
+      showToast('Profile Updated', 'Student credentials and bio successfully saved.', 'success');
+    }
+
+    // Avatar Image FileReader
+    function handleAvatarChange(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64Url = event.target.result;
+        appProfile.avatar = base64Url;
+        saveData('PROFILE', appProfile);
+        renderProfile();
+        showToast('Photo Updated', 'New profile avatar applied.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ----------------------------------------------------
+       INITIALIZE ON LOAD
+    ---------------------------------------------------- */
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      renderModules();
+      renderTools();
+      renderResources();
+      renderLabs();
+      renderAssignmentSelector();
+      renderSubmissionsHistory();
+      renderProfile();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
